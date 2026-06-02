@@ -90,15 +90,7 @@
                        class="px-4 py-2 rounded-lg hover:bg-[#C48400] transition {% if title == '課程預選' or title == '開課查詢' %}bg-[#C48400]{% endif %}">
                         開課查詢
                     </a>
-                    <a href="/graduation"
-                       class="px-4 py-2 rounded-lg hover:bg-[#C48400] transition {% if title == '畢業進度' %}bg-[#C48400]{% endif %}">
-                        畢業進度
-                    </a>
-                    <a href="/recommend"
-                       class="px-4 py-2 rounded-lg hover:bg-[#C48400] transition {% if title == '選課建議' %}bg-[#C48400]{% endif %}">
-                        選課建議
-                    </a>
-                    {% if logged_in %}
+{% if logged_in %}
                     <form method="post" action="/logout">
                         <button type="submit" class="px-4 py-2 rounded-lg hover:bg-[#C48400] transition">
                             登出
