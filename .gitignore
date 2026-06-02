@@ -12,9 +12,8 @@ build/
 venv/
 env/
 
-# Personal data (MOOCS sync output)
-data/taken_courses.csv
-data/sessions/
+# Data and personal files
+data/
 
 # Playwright browsers
 .playwright/
@@ -29,3 +28,7 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Tests and docs
+tests/
+docs/
