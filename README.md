@@ -19,28 +19,11 @@ pip install -r requirements.txt
 python -m playwright install chromium
 ```
 
-### 2. 準備修課資料（選擇其一）
+### 2. 同步修課資料
 
-**方式 A：手動建立 CSV**
+啟動服務後，前往 `/login` 輸入 MOOCS 帳號密碼，系統會自動抓取修課成績並產生 `data/taken_courses.csv`。
 
-複製範例檔並填入自己的修課紀錄：
-
-```bash
-cp data/taken_courses_sample.csv data/taken_courses.csv
-```
-
-CSV 格式：
-
-| 學年學期 | 課程名稱 | 學分數 | 修課成績 |
-|----------|----------|--------|----------|
-| 1131     | 計算機概論 | 3   | 85       |
-| 1132     | 資料結構   | 3   |          |
-
-（修課成績留空表示修課中）
-
-**方式 B：透過 Web 介面登入自動同步**
-
-啟動服務後，前往 `/login` 輸入 MOOCS 帳號密碼，系統會自動抓取成績並產生 `taken_courses.csv`。
+> **注意**：資料抓取需要 1–2 分鐘，請耐心等待同步完成後再操作。
 
 ### 3. 啟動服務
 
@@ -65,14 +48,11 @@ Course-Selector-Web/
 │   ├── catalog.py           # 課程目錄 API 查詢
 │   └── utils.py             # 工具函式
 ├── data/
-│   ├── taken_courses.csv        # 個人修課紀錄（不納入版控）
-│   └── taken_courses_sample.csv # 格式範例
-├── tests/                   # 單元測試
+│   └── taken_courses.csv    # 登入後自動產生，個人修課紀錄（不納入版控）
 └── requirements.txt
 ```
 
 ## 注意事項
 
 - `data/taken_courses.csv` 含個人資料，已加入 `.gitignore`，不會上傳至 GitHub
-- MOOCS 登入同步需要較長時間（約 1–2 分鐘），請耐心等待
 - 本專案僅供個人學習使用，請勿大量呼叫學校 API
