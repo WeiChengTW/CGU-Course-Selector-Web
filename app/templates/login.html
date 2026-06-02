@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}登入 - 長庚大學選課系統{% endblock %}
+
+{% block content %}
+<div class="min-h-[70vh] flex items-center justify-center px-4">
+    <div class="w-full max-w-md bg-white rounded-2xl shadow-xl border border-[#E8E2D6] p-8" x-data="{ loading: false }">
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#E39800] text-white text-2xl font-bold mb-4">
+                M
+            </div>
+            <h1 class="text-3xl font-bold text-[#333333]">MOOCS 登入</h1>
+            <p class="mt-2 text-sm text-[#666666]">登入後同步已修課程資料</p>
+        </div>
+
+        {% if error %}
+        <div class="mb-6 rounded-lg border border-[#F5B333] bg-[#FFF8E8] px-4 py-3 text-sm text-[#8A5A00]">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form method="post" action="/login" class="space-y-5" @submit="loading = true">
+            <div>
+                <label for="username" class="block text-sm font-semibold text-[#333333] mb-2">帳號</label>
+                <input
+                    id="username"
+                    name="username"
+                    type="text"
+                    autocomplete="username"
+                    required
+                    class="w-full rounded-lg border border-[#D1C7AC] px-4 py-3 text-[#333333] focus:border-[#E39800] focus:outline-none focus:ring-2 focus:ring-[#F5B333]/40"
+                    placeholder="請輸入 MOOCS 帳號"
+                    :class="loading ? 'opacity-50 pointer-events-none' : ''"
+                >
+            </div>
+
+            <div>
+                <label for="password" class="block text-sm font-semibold text-[#333333] mb-2">密碼</label>
+                <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    autocomplete="current-password"
+                    required
+                    class="w-full rounded-lg border border-[#D1C7AC] px-4 py-3 text-[#333333] focus:border-[#E39800] focus:outline-none focus:ring-2 focus:ring-[#F5B333]/40"
+                    placeholder="請輸入 MOOCS 密碼"
+                    :class="loading ? 'opacity-50 pointer-events-none' : ''"
+                >
+            </div>
+
+            <button
+                type="submit"
+                class="w-full rounded-lg bg-[#E39800] px-4 py-3 font-semibold text-white shadow hover:bg-[#C48400] focus:outline-none focus:ring-2 focus:ring-[#F5B333] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 transition"
+                :disabled="loading"
+            >
+                <span x-show="!loading">登入並同步課程</span>
+                <span x-show="loading" x-cloak>同步中，請稍候...</span>
+            </button>
+        </form>
+
+        <div class="mt-6 rounded-lg bg-[#F9F9F9] border border-[#E8E2D6] px-4 py-3 text-sm text-[#333333] leading-relaxed">
+            系統不會儲存您的密碼；登出時會清除本次登入產生的暫存資料。
+        </div>
+    </div>
+</div>
+{% endblock %}

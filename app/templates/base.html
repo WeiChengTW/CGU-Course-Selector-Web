@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}長庚大學選課系統{% endblock %}</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- CGU 品牌色彩 - 使用 CSS 變數 -->
+    <style>
+        :root {
+            --cgu-orange: #E39800;
+            --cgu-orange-dark: #C48400;
+            --cgu-orange-light: #F5B333;
+            --cgu-slate: #333333;
+            --cgu-sand: #D1C7AC;
+            --cgu-sand-light: #E8E2D6;
+            --cgu-pearl: #F9F9F9;
+        }
+
+        /* 基礎樣式 */
+        body {
+            font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+        }
+
+        /* CGU 品牌色工具類 */
+        .bg-cgu-orange { background-color: var(--cgu-orange); }
+        .bg-cgu-orange-dark { background-color: var(--cgu-orange-dark); }
+        .bg-cgu-orange-light { background-color: var(--cgu-orange-light); }
+        .bg-cgu-slate { background-color: var(--cgu-slate); }
+        .bg-cgu-sand { background-color: var(--cgu-sand); }
+        .bg-cgu-sand-light { background-color: var(--cgu-sand-light); }
+        .bg-cgu-pearl { background-color: var(--cgu-pearl); }
+
+        .text-cgu-orange { color: var(--cgu-orange); }
+        .text-cgu-orange-dark { color: var(--cgu-orange-dark); }
+        .text-cgu-orange-light { color: var(--cgu-orange-light); }
+        .text-cgu-slate { color: var(--cgu-slate); }
+        .text-cgu-sand { color: var(--cgu-sand); }
+
+        .border-cgu-orange { border-color: var(--cgu-orange); }
+        .border-cgu-orange-dark { border-color: var(--cgu-orange-dark); }
+        .border-cgu-sand { border-color: var(--cgu-sand); }
+        .border-cgu-sand-light { border-color: var(--cgu-sand-light); }
+
+        .hover\:bg-cgu-orange-dark:hover { background-color: var(--cgu-orange-dark); }
+        .hover\:bg-cgu-orange-light:hover { background-color: var(--cgu-orange-light); }
+        .hover\:text-cgu-orange-dark:hover { color: var(--cgu-orange-dark); }
+        .hover\:text-cgu-orange-light:hover { color: var(--cgu-orange-light); }
+        .hover\:border-cgu-orange-dark:hover { border-color: var(--cgu-orange-dark); }
+
+        /* 漸層 */
+        .bg-gradient-cgu {
+            background: linear-gradient(to right, var(--cgu-orange), var(--cgu-orange-dark));
+        }
+        .bg-gradient-cgu-light {
+            background: linear-gradient(to bottom right, var(--cgu-sand-light), var(--cgu-pearl));
+        }
+    </style>
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    {% block head %}{% endblock %}
+</head>
+<body class="bg-[#F9F9F9] min-h-screen">
+    <!-- 導航列 -->
+    <nav class="bg-[#E39800] text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="text-xl font-bold hover:text-[#F5B333] transition">
+                        🎓 長庚大學選課系統
+                    </a>
+                </div>
+                <div class="flex items-center space-x-1">
+                    <a href="/courses"
+                       class="px-4 py-2 rounded-lg hover:bg-[#C48400] transition {% if title == '已修課程' %}bg-[#C48400]{% endif %}">
+                        已修課程
+                    </a>
+                    <a href="/catalog"
+                       class="px-4 py-2 rounded-lg hover:bg-[#C48400] transition {% if title == '課程預選' or title == '開課查詢' %}bg-[#C48400]{% endif %}">
+                        開課查詢
+                    </a>
+                    <a href="/graduation"
+                       class="px-4 py-2 rounded-lg hover:bg-[#C48400] transition {% if title == '畢業進度' %}bg-[#C48400]{% endif %}">
+                        畢業進度
+                    </a>
+                    <a href="/recommend"
+                       class="px-4 py-2 rounded-lg hover:bg-[#C48400] transition {% if title == '選課建議' %}bg-[#C48400]{% endif %}">
+                        選課建議
+                    </a>
+                    {% if logged_in %}
+                    <form method="post" action="/logout">
+                        <button type="submit" class="px-4 py-2 rounded-lg hover:bg-[#C48400] transition">
+                            登出
+                        </button>
+                    </form>
+                    {% else %}
+                    <a href="/login"
+                       class="px-4 py-2 rounded-lg hover:bg-[#C48400] transition {% if title == '登入' %}bg-[#C48400]{% endif %}">
+                        登入
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要內容區 -->
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- 頁尾 -->
+    <footer class="bg-[#E8E2D6] border-t mt-auto py-4">
+        <div class="max-w-7xl mx-auto px-4 text-center text-[#333333] text-sm">
+            長庚大學選課視覺化系統 | 資料僅供參考，正式資格以教務處認定為準
+        </div>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

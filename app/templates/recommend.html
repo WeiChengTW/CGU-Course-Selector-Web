@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}選課建議 - 長庚大學選課系統{% endblock %}
+
+{% block content %}
+<div x-data="recommendApp()">
+    <h1 class="text-3xl font-bold text-[#333333] mb-6">💡 選課建議</h1>
+
+    <!-- 說明區塊 -->
+    <div class="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
+        <p class="text-orange-700 text-sm">
+            以下建議根據您的畢業規則與已修課程分析產生，建議優先修習高優先級的缺修課程。
+        </p>
+    </div>
+
+    <!-- 建議清單 -->
+    <div class="bg-white rounded-lg shadow overflow-hidden mb-6 border border-gray-200">
+        <div class="px-4 py-3 bg-gray-50 border-b flex justify-between items-center">
+            <h3 class="font-semibold text-[#333333]">建議修習課程</h3>
+            <button @click="addToAllCart()"
+                    x-show="recommendations.length > 0"
+                    class="text-sm text-[#E39800] hover:text-[#C48400]">
+                全部加入待選清單
+            </button>
+        </div>
+
+        <div class="divide-y divide-gray-200">
+            <template x-for="(rec, index) in recommendations" :key="index">
+                <div class="p-4 hover:bg-orange-50 flex items-center justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2">
+                            <span class="text-lg font-medium text-gray-900" x-text="rec"></span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <a :href="`/catalog?keyword=${encodeURIComponent(rec)}`"
+                           class="text-sm text-[#E39800] hover:text-[#C48400] px-3 py-1 border border-[#E39800] rounded hover:bg-orange-50">
+                            查詢開課
+                        </a>
+                        <button @click="addToCart(rec)"
+                                class="text-sm bg-[#E39800] text-white px-3 py-1 rounded hover:bg-[#C48400]">
+                            加入待選
+                        </button>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <div x-show="recommendations.length === 0" class="text-center py-8 text-gray-400">
+            目前無選課建議，請先完成畢業規則分析。
+        </div>
+    </div>
+
+    <!-- 待選清單 -->
+    <div x-show="cart.length > 0" class="bg-white rounded-lg shadow overflow-hidden border border-gray-200">
+        <div class="px-4 py-3 bg-green-50 border-b flex justify-between items-center">
+            <h3 class="font-semibold text-green-800">📝 我的待選清單</h3>
+            <button @click="clearCart()" class="text-sm text-red-600 hover:text-red-800">
+                清空
+            </button>
+        </div>
+
+        <ul class="divide-y divide-gray-200">
+            <template x-for="(item, index) in cart" :key="index">
+                <li class="px-4 py-3 flex items-center justify-between hover:bg-orange-50">
+                    <span class="text-gray-900" x-text="courseName(item)"></span>
+                    <div class="flex items-center gap-2">
+                        <a :href="`/catalog?keyword=${encodeURIComponent(courseName(item))}`"
+                           class="text-sm text-[#E39800] hover:underline">查詢</a>
+                        <button @click="removeFromCart(index)" class="text-red-500 hover:text-red-700">
+                            ✕
+                        </button>
+                    </div>
+                </li>
+            </template>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function recommendApp() {
+    return {
+        report: null,
+        cart: [],
+
+        async init() {
+            // 從 localStorage 載入待選清單
+            this.cart = JSON.parse(localStorage.getItem('courseCart') || '[]');
+
+            // 載入建議
+            try {
+                const response = await fetch('/graduation/data');
+                this.report = await response.json();
+            } catch (e) {
+                console.error('載入建議失敗', e);
+            }
+        },
+
+        get recommendations() {
+            return this.report?.next_semester_recommendations || [];
+        },
+
+        courseName(course) {
+            return typeof course === 'string' ? course : (course.CCOURSENAME || course.name || '未命名課程');
+        },
+
+        addToCart(course) {
+            if (!this.cart.includes(course)) {
+                this.cart.push(course);
+                this.saveCart();
+            }
+        },
+
+        addToAllCart() {
+            this.recommendations.forEach(rec => {
+                if (!this.cart.includes(rec)) {
+                    this.cart.push(rec);
+                }
+            });
+            this.saveCart();
+        },
+
+        removeFromCart(index) {
+            this.cart.splice(index, 1);
+            this.saveCart();
+        },
+
+        clearCart() {
+            this.cart = [];
+            this.saveCart();
+        },
+
+        saveCart() {
+            localStorage.setItem('courseCart', JSON.stringify(this.cart));
+        }
+    }
+}
+</script>
+{% endblock %}

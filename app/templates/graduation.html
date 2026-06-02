@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}畢業進度 - 長庚大學選課系統{% endblock %}
+
+{% block content %}
+<div x-data="graduationApp()">
+    <h1 class="text-3xl font-bold text-[#333333] mb-6">📊 畢業進度</h1>
+
+    <!-- 狀態概覽 -->
+    <div class="bg-white rounded-lg shadow p-6 mb-6 border border-gray-200">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h2 class="text-xl font-semibold text-[#333333]" x-text="statusText"></h2>
+                <p class="text-gray-500 mt-1" x-text="oneSentenceSummary"></p>
+            </div>
+            <div class="text-right">
+                <div class="text-3xl font-bold" :class="isComplete ? 'text-green-600' : 'text-[#E39800]'">
+                    <span x-text="recognizedCredits"></span> / <span x-text="requiredCredits"></span>
+                </div>
+                <div class="text-sm text-gray-500">已認列學分</div>
+            </div>
+        </div>
+
+        <!-- 進度條 -->
+        <div class="relative pt-1">
+            <div class="flex mb-2 items-center justify-between">
+                <span class="text-xs font-semibold inline-block text-[#E39800]">
+                    完成度
+                </span>
+                <span class="text-xs font-semibold inline-block text-[#E39800]" x-text="progressPercent + '%'"></span>
+            </div>
+            <div class="overflow-hidden h-3 text-xs flex rounded bg-orange-100">
+                <div :style="`width:${progressPercent}%`"
+                     class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-gradient-to-r from-[#E39800] to-[#C48400] transition-all duration-500"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 學分圖表 -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div class="bg-white rounded-lg shadow p-6 border border-gray-200">
+            <h3 class="text-lg font-semibold text-[#333333] mb-4">學分分布</h3>
+            <canvas id="creditsChart"></canvas>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6 border border-gray-200">
+            <h3 class="text-lg font-semibold text-[#333333] mb-4">各類別完成狀況</h3>
+            <div class="space-y-4">
+                <template x-for="req in requirements" :key="req.category">
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="font-medium text-gray-700" x-text="req.category"></span>
+                            <span :class="req.status === '已完成' ? 'text-green-600' : 'text-[#E39800]'">
+                                <span x-text="req.completed"></span> / <span x-text="req.required"></span>
+                            </span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="h-2 rounded-full transition-all"
+                                 :class="req.status === '已完成' ? 'bg-green-500' : 'bg-[#E39800]'"
+                                 :style="`width: ${Math.min(100, (req.completed / req.required) * 100)}%`"></div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <!-- 缺修課程 -->
+    <div class="bg-white rounded-lg shadow overflow-hidden mb-6 border border-gray-200">
+        <div class="px-4 py-3 bg-gray-50 border-b">
+            <h3 class="font-semibold text-[#333333]">缺修課程</h3>
+        </div>
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">優先級</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">類別</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">缺少項目</th>
+                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">學分</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">建議動作</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                <template x-for="item in missingItems" :key="item.item">
+                    <tr class="hover:bg-orange-50">
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-1 rounded text-xs"
+                                  :class="{
+                                      'bg-red-100 text-red-800': item.priority === '高',
+                                      'bg-orange-100 text-[#C48400]': item.priority === '中',
+                                      'bg-gray-100 text-gray-800': item.priority === '低'
+                                  }"
+                                  x-text="item.priority"></span>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-700" x-text="item.category"></td>
+                        <td class="px-4 py-3 text-sm font-medium text-gray-900" x-text="item.item"></td>
+                        <td class="px-4 py-3 text-sm text-center text-gray-700" x-text="item.credits"></td>
+                        <td class="px-4 py-3 text-sm text-gray-500" x-text="item.recommended_action"></td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+        <div x-show="missingItems.length === 0" class="text-center py-8 text-gray-400">
+            無缺修課程
+        </div>
+    </div>
+
+    <!-- 需人工確認項目 -->
+    <div x-show="manualReviewItems.length > 0" class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+        <h3 class="font-semibold text-orange-800 mb-2">⚠️ 需人工確認</h3>
+        <ul class="space-y-1">
+            <template x-for="item in manualReviewItems" :key="item.item">
+                <li class="text-sm text-orange-700">
+                    <span class="font-medium" x-text="item.item"></span> - <span x-text="item.reason"></span>
+                </li>
+            </template>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function graduationApp() {
+    return {
+        report: null,
+
+        async init() {
+            try {
+                const response = await fetch('/graduation/data');
+                this.report = await response.json();
+                this.$nextTick(() => this.renderChart());
+            } catch (e) {
+                console.error('載入畢業資料失敗', e);
+            }
+        },
+
+        get statusText() {
+            return this.report?.status || '載入中...';
+        },
+
+        get isComplete() {
+            return this.report?.status === '符合畢業資格';
+        },
+
+        get oneSentenceSummary() {
+            return this.report?.one_sentence_summary || '';
+        },
+
+        get recognizedCredits() {
+            return this.report?.recognized_credits || 0;
+        },
+
+        get requiredCredits() {
+            return this.report?.required_credits || 128;
+        },
+
+        get progressPercent() {
+            return Math.min(100, Math.round((this.recognizedCredits / this.requiredCredits) * 100));
+        },
+
+        get requirements() {
+            return this.report?.requirements || [];
+        },
+
+        get missingItems() {
+            return this.report?.missing_items || [];
+        },
+
+        get manualReviewItems() {
+            return this.report?.manual_review_items || [];
+        },
+
+        renderChart() {
+            const ctx = document.getElementById('creditsChart');
+            if (!ctx || !this.requirements.length) return;
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: this.requirements.map(r => r.category),
+                    datasets: [{
+                        data: this.requirements.map(r => r.completed),
+                        backgroundColor: [
+                            '#E39800', // CGU Orange
+                            '#22c55e', // green-500
+                            '#8b5cf6', // purple-500
+                            '#3b82f6', // blue-500
+                            '#f59e0b', // amber-500
+                            '#ef4444', // red-500
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+    }
+}
+</script>
+{% endblock %}

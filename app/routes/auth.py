@@ -1,0 +1,82 @@
+from __future__ import annotations
+
+import asyncio
+
+from fastapi import APIRouter, Form, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
+
+from app.services.moocs_sync_service import sync_moocs_courses
+from app.services.session_service import (
+    SESSION_COOKIE,
+    create_session_dir,
+    destroy_session,
+    get_session_id,
+    is_logged_in,
+)
+from app.templates_config import render_template
+
+router = APIRouter()
+
+
+@router.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    if is_logged_in(request):
+        return RedirectResponse("/courses", status_code=303)
+
+    return render_template(
+        "login.html",
+        {
+            "request": request,
+            "title": "登入",
+            "error": "",
+            "logged_in": False,
+        },
+    )
+
+
+@router.post("/login", response_class=HTMLResponse)
+async def login(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+):
+    session_id, session_dir = create_session_dir()
+
+    try:
+        await asyncio.to_thread(
+            sync_moocs_courses,
+            username=username.strip(),
+            password=password,
+            session_dir=session_dir,
+        )
+    except Exception:
+        destroy_session(session_id)
+        return render_template(
+            "login.html",
+            {
+                "request": request,
+                "title": "登入",
+                "error": "登入或同步失敗，請確認帳密正確，或 MOOCS 是否需要驗證碼。",
+                "logged_in": False,
+            },
+        )
+
+    response = RedirectResponse("/courses", status_code=303)
+    response.set_cookie(
+        SESSION_COOKIE,
+        session_id,
+        httponly=True,
+        samesite="lax",
+        max_age=4 * 60 * 60,
+    )
+    return response
+
+
+@router.post("/logout")
+async def logout(request: Request):
+    session_id = get_session_id(request)
+    destroy_session(session_id)
+
+    response = RedirectResponse("/login", status_code=303)
+    response.delete_cookie(SESSION_COOKIE)
+    return response

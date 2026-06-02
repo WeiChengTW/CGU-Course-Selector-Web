@@ -1,0 +1,768 @@
+{% extends "base.html" %}
+
+{% block title %}課程預選 - 長庚大學選課系統{% endblock %}
+
+{% block content %}
+<div x-data="courseSelectorApp()" class="min-h-screen">
+    <!-- 頂部狀態列 -->
+    <div class="bg-gradient-to-r from-[#E39800] to-[#C48400] text-white px-6 py-4 rounded-xl shadow-lg mb-6">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+                <h1 class="text-2xl font-bold">📚 課程預選系統</h1>
+                <p class="text-[#F5B333] text-sm mt-1">長庚大學 115 學年度選課系統</p>
+            </div>
+            <div class="flex items-center gap-6">
+                <div class="text-center">
+                    <div class="text-3xl font-bold" x-text="takenInfo.passed_credits || 0">0</div>
+                    <div class="text-xs text-[#F5B333]">已修學分</div>
+                </div>
+                <div class="w-px h-10 bg-white/30"></div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold" x-text="cart.length">0</div>
+                    <div class="text-xs text-[#F5B333]">預選課程</div>
+                </div>
+                <div class="w-px h-10 bg-white/30"></div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-yellow-300" x-text="totalCredits">0</div>
+                    <div class="text-xs text-[#F5B333]">預選學分</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主內容區 -->
+    <div class="space-y-6">
+        <!-- 週課表（置頂放大） -->
+        <div class="bg-white rounded-xl shadow-lg border-2 border-[#E39800] overflow-hidden">
+            <div class="bg-gradient-to-r from-[#E39800] to-[#C48400] px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">📆</span>
+                    <span class="text-xl font-bold text-white">週課表</span>
+                </div>
+                <div class="text-sm text-[#F5B333]">點擊課程可移除</div>
+            </div>
+            <div class="p-4 overflow-x-auto bg-[#F9F9F9]">
+                <table class="w-full border-collapse text-sm min-w-[600px]">
+                    <thead>
+                        <tr class="bg-[#E8E2D6]">
+                            <th class="w-20 p-3 text-center font-semibold text-[#333333] border border-gray-200">時間</th>
+                            <th class="p-3 text-center font-semibold text-[#333333] border border-gray-200">週一</th>
+                            <th class="p-3 text-center font-semibold text-[#333333] border border-gray-200">週二</th>
+                            <th class="p-3 text-center font-semibold text-[#333333] border border-gray-200">週三</th>
+                            <th class="p-3 text-center font-semibold text-[#333333] border border-gray-200">週四</th>
+                            <th class="p-3 text-center font-semibold text-[#333333] border border-gray-200">週五</th>
+                            <th class="p-3 text-center font-semibold text-[#333333] border border-gray-200">週六</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scheduleBody">
+                        <!-- 由 JavaScript 生成 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 下方三欄區域 -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- 左側：搜尋區 -->
+            <div class="lg:col-span-1 space-y-4">
+            <!-- 搜尋條件 -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="bg-[#E8E2D6] px-4 py-3 border-b flex items-center gap-2">
+                    <span class="text-lg">🔍</span>
+                    <span class="font-semibold text-[#333333]">搜尋條件</span>
+                </div>
+                <div class="p-4 space-y-3">
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">開課學期</label>
+                        <select x-model="termid" @change="loadDepartments()"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#E39800] focus:border-transparent text-gray-700">
+                            <template x-for="term in terms" :key="term.termid">
+                                <option :value="term.termid" x-text="term.label"></option>
+                            </template>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">開課單位</label>
+                        <select x-model="departmentid" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700">
+                            <option value="">全部單位</option>
+                            <template x-for="dept in departments" :key="dept.id">
+                                <option :value="dept.id" x-text="dept.name"></option>
+                            </template>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">關鍵字</label>
+                            <input type="text" x-model="keyward" placeholder="2~20 字"
+                                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 placeholder-gray-400">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">開課序號</label>
+                            <input type="text" x-model="sectionid" placeholder="如 A2342"
+                                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 placeholder-gray-400">
+                        </div>
+                    </div>
+
+                    <button @click="advancedOpen = !advancedOpen"
+                            class="w-full flex items-center justify-between rounded-lg border border-[#D1C7AC] px-4 py-2 text-sm font-medium text-[#333333] hover:bg-[#F9F9F9]">
+                        <span>更多條件</span>
+                        <span x-text="advancedOpen ? '收合' : '展開'"></span>
+                    </button>
+
+                    <div x-show="advancedOpen" x-cloak class="space-y-3 rounded-lg border border-gray-200 bg-[#F9F9F9] p-3">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">科目代號</label>
+                                <input type="text" x-model="call_id" placeholder="如 IT3036"
+                                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 placeholder-gray-400">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">授課教師</label>
+                                <input type="text" x-model="teaName" placeholder="教師姓名"
+                                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 placeholder-gray-400">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">課程名稱</label>
+                                <input type="text" x-model="cName" placeholder="課程名稱"
+                                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 placeholder-gray-400">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">年級</label>
+                                <input type="text" x-model="courseYear" placeholder="1"
+                                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 placeholder-gray-400">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">上課時間(星期)</label>
+                                <select x-model="week" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700">
+                                    <option value="">不限</option>
+                                    <option value="2">一</option>
+                                    <option value="3">二</option>
+                                    <option value="4">三</option>
+                                    <option value="5">四</option>
+                                    <option value="6">五</option>
+                                    <option value="7">六</option>
+                                    <option value="1">日</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">英語授課</label>
+                                <label class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700">
+                                    <input type="checkbox" x-model="englishOnly" class="rounded border-gray-300 text-[#E39800] focus:ring-[#E39800]">
+                                    只看英語授課
+                                </label>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">開始節次</label>
+                                <select x-model="stime" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700">
+                                    <option value="">不限</option>
+                                    <template x-for="period in officialPeriods" :key="`s-${period.value}`">
+                                        <option :value="period.value" x-text="period.startLabel"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">結束節次</label>
+                                <select x-model="etime" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700">
+                                    <option value="">不限</option>
+                                    <template x-for="period in officialPeriods" :key="`e-${period.value}`">
+                                        <option :value="period.value" x-text="period.endLabel"></option>
+                                    </template>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">通識領域</label>
+                            <select x-model="fieldid" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700">
+                                <option value="">不限</option>
+                                <template x-for="field in fields" :key="field.id">
+                                    <option :value="field.id" x-text="field.name"></option>
+                                </template>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button @click="search()"
+                            :disabled="loading"
+                            class="w-full bg-gradient-to-r from-[#E39800] to-[#C48400] text-white rounded-lg px-4 py-2.5 font-medium hover:from-[#C48400] hover:to-[#333333] disabled:from-gray-400 disabled:to-gray-400 transition-all shadow-sm">
+                        <span x-show="!loading">🔍 搜尋課程</span>
+                        <span x-show="loading" class="flex items-center justify-center gap-2">
+                            <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            搜尋中...
+                        </span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 搜尋結果 -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="bg-[#E8E2D6] px-4 py-3 border-b flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="text-lg">📋</span>
+                        <span class="font-semibold text-[#333333]">搜尋結果</span>
+                    </div>
+                    <span class="text-sm text-gray-500 bg-gray-200 px-2 py-0.5 rounded-full" x-text="results.length + ' 筆'"></span>
+                </div>
+                <div class="max-h-[400px] overflow-y-auto">
+                    <template x-for="course in results" :key="course.SECTIONID">
+                        <div class="p-3 border-b border-gray-100 hover:bg-orange-50 cursor-pointer transition-colors"
+                             :class="{
+                                 'bg-green-50 border-l-4 border-l-green-500': course.course_status === 'passed',
+                                 'bg-red-50 border-l-4 border-l-red-500': course.course_status === 'failed',
+                                 'bg-yellow-50 border-l-4 border-l-yellow-500': course.course_status === 'in_progress'
+                             }"
+                             draggable="true"
+                             @dragstart="dragStart($event, course)"
+                             @click="showDetail(course)">
+                            <div class="flex justify-between items-start gap-2">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <span class="font-medium text-gray-900 truncate" x-text="course.CCOURSENAME"></span>
+                                        <template x-if="course.course_status === 'passed'">
+                                            <span class="shrink-0 text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium">✓ 已通過</span>
+                                        </template>
+                                        <template x-if="course.course_status === 'failed'">
+                                            <span class="shrink-0 text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-medium">✗ 未通過</span>
+                                        </template>
+                                        <template x-if="course.course_status === 'in_progress'">
+                                            <span class="shrink-0 text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full font-medium">⏳ 修習中</span>
+                                        </template>
+                                    </div>
+                                    <div class="text-xs text-gray-500 mt-1 flex flex-wrap gap-x-2">
+                                        <span x-text="course.NAME"></span>
+                                        <span class="text-gray-300">|</span>
+                                        <span x-text="course.C_PTIME"></span>
+                                        <span class="text-gray-300">|</span>
+                                        <span x-text="course.CREDITS + ' 學分'"></span>
+                                    </div>
+                                </div>
+                                <template x-if="course.course_status !== 'passed'">
+                                    <button @click.stop="addToCart(course)"
+                                            class="shrink-0 text-xs bg-orange-100 text-[#C48400] px-2.5 py-1.5 rounded-lg hover:bg-orange-200 font-medium transition-colors border border-[#E39800]">
+                                        + 加入
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                    <div x-show="results.length === 0 && searched" class="text-center py-12 text-gray-400">
+                        <div class="text-4xl mb-2">🔍</div>
+                        <p>輸入條件後點擊搜尋</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 中間：學分統計 -->
+        <div class="lg:col-span-1 space-y-4">
+            <div class="bg-gradient-to-br from-[#E8E2D6] to-[#F9F9F9] rounded-xl p-5 border border-[#D1C7AC] shadow-sm">
+                <h3 class="font-semibold text-[#333333] mb-4 flex items-center gap-2 text-lg">
+                    <span>📊</span> 學分統計
+                </h3>
+                <div class="grid grid-cols-3 gap-3 text-center">
+                    <div class="bg-white rounded-lg p-3 shadow-sm">
+                        <div class="text-2xl font-bold text-gray-700" x-text="takenInfo.passed_credits || 0">0</div>
+                        <div class="text-xs text-gray-500">已修學分</div>
+                    </div>
+                    <div class="bg-white rounded-lg p-3 shadow-sm">
+                        <div class="text-2xl font-bold text-[#E39800]" x-text="totalCredits">0</div>
+                        <div class="text-xs text-gray-500">預選學分</div>
+                    </div>
+                    <div class="bg-white rounded-lg p-3 shadow-sm">
+                        <div class="text-2xl font-bold text-[#C48400]" x-text="(takenInfo.passed_credits || 0) + totalCredits">0</div>
+                        <div class="text-xs text-gray-500">預計總計</div>
+                    </div>
+                </div>
+                <div class="mt-3 bg-white rounded-lg p-2">
+                    <div class="flex justify-between text-xs text-gray-500 mb-1">
+                        <span>畢業門檻 128 學分</span>
+                        <span x-text="Math.min(100, Math.round(((takenInfo.passed_credits || 0) + totalCredits) / 128 * 100)) + '%'"></span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div class="bg-gradient-to-r from-[#E39800] to-[#C48400] h-2.5 rounded-full transition-all duration-500"
+                             :style="`width: ${Math.min(100, ((takenInfo.passed_credits || 0) + totalCredits) / 128 * 100)}%`"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右側：預選清單 -->
+        <div class="lg:col-span-1 space-y-4">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="bg-[#E8E2D6] px-4 py-3 border-b flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="text-lg">⭐</span>
+                        <span class="font-semibold text-[#333333]">預選清單</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button @click="exportCart()" class="text-xs text-[#E39800] hover:text-[#C48400] px-2 py-1 rounded hover:bg-orange-50">匯出</button>
+                        <button @click="clearCart()" class="text-xs text-red-600 hover:text-red-800 px-2 py-1 rounded hover:bg-red-50">清空</button>
+                    </div>
+                </div>
+                <div class="p-3 min-h-[200px]" @dragover.prevent @drop="dropOnList($event)">
+                    <template x-for="(course, index) in cart" :key="course.SECTIONID">
+                        <div class="flex items-center gap-2 p-2 mb-2 bg-[#F9F9F9] rounded-lg border-l-4 transition-all hover:shadow-sm"
+                             :class="{
+                                 'border-l-red-500 bg-red-50': index === 0,
+                                 'border-l-[#E39800] bg-orange-50': index === 1,
+                                 'border-l-yellow-500 bg-yellow-50': index === 2,
+                                 'border-l-[#D1C7AC]': index > 2
+                             }"
+                             draggable="true"
+                             @dragstart="dragStartReorder($event, index)"
+                             @dragover.prevent
+                             @drop="dropReorder($event, index)">
+                            <div class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                                 :class="{
+                                     'bg-red-500 text-white': index === 0,
+                                     'bg-[#E39800] text-white': index === 1,
+                                     'bg-yellow-500 text-white': index === 2,
+                                     'bg-[#D1C7AC] text-gray-600': index > 2
+                                 }"
+                                 x-text="index + 1"></div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium text-sm text-gray-900 truncate" x-text="course.CCOURSENAME"></div>
+                                <div class="text-xs text-gray-500" x-text="course.C_PTIME"></div>
+                            </div>
+                            <button @click="removeFromCart(course)" class="text-gray-400 hover:text-red-600 text-lg leading-none">×</button>
+                        </div>
+                    </template>
+                    <div x-show="cart.length === 0" class="text-center py-12 text-gray-400">
+                        <div class="text-4xl mb-2">📝</div>
+                        <p>從搜尋結果拖曳或點擊「加入」</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 圖例說明 -->
+            <div class="bg-[#E8E2D6] rounded-xl p-4 border border-[#D1C7AC]">
+                <h3 class="font-semibold text-[#333333] mb-2 text-sm">圖例說明</h3>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div class="flex items-center gap-2">
+                        <div class="w-3 h-3 rounded bg-green-500"></div>
+                        <span class="text-gray-600">已通過</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-3 h-3 rounded bg-red-500"></div>
+                        <span class="text-gray-600">未通過</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-3 h-3 rounded bg-yellow-500"></div>
+                        <span class="text-gray-600">修習中</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-3 h-3 rounded bg-[#E39800]"></div>
+                        <span class="text-gray-600">預選課程</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 課程詳情彈窗 -->
+    <div x-show="selectedCourse" x-cloak class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="selectedCourse = null">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[85vh] overflow-hidden">
+            <template x-if="selectedCourse">
+                <div>
+                    <div class="bg-gradient-to-r from-[#E39800] to-[#C48400] text-white px-6 py-4">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h2 class="text-xl font-bold" x-text="selectedCourse.CCOURSENAME"></h2>
+                                <div class="text-[#F5B333] text-sm mt-1" x-text="selectedCourse.DEPARTMENTNAME_C"></div>
+                            </div>
+                            <button @click="selectedCourse = null" class="text-white/70 hover:text-white text-2xl leading-none">×</button>
+                        </div>
+                    </div>
+                    <div class="p-6 overflow-y-auto max-h-[50vh]">
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div class="bg-[#F9F9F9] rounded-lg p-3">
+                                <div class="text-xs text-gray-500">開課序號</div>
+                                <div class="font-medium text-gray-900" x-text="selectedCourse.SECTIONID"></div>
+                            </div>
+                            <div class="bg-[#F9F9F9] rounded-lg p-3">
+                                <div class="text-xs text-gray-500">學分數</div>
+                                <div class="font-medium text-gray-900" x-text="selectedCourse.CREDITS"></div>
+                            </div>
+                            <div class="bg-[#F9F9F9] rounded-lg p-3">
+                                <div class="text-xs text-gray-500">授課教師</div>
+                                <div class="font-medium text-gray-900" x-text="selectedCourse.NAME"></div>
+                            </div>
+                            <div class="bg-[#F9F9F9] rounded-lg p-3">
+                                <div class="text-xs text-gray-500">上課時間</div>
+                                <div class="font-medium text-gray-900" x-text="selectedCourse.C_PTIME"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="px-6 py-4 bg-[#E8E2D6] border-t border-[#D1C7AC] flex gap-3">
+                        <template x-if="selectedCourse.course_status !== 'passed'">
+                            <button @click="addToCart(selectedCourse); selectedCourse = null"
+                                    class="flex-1 bg-gradient-to-r from-[#E39800] to-[#C48400] text-white rounded-lg px-4 py-2.5 font-medium hover:from-[#C48400] hover:to-[#333333]">
+                                加入預選清單
+                            </button>
+                        </template>
+                        <template x-if="selectedCourse.course_status === 'passed'">
+                            <div class="flex-1 text-center text-gray-500 py-2.5">此課程已通過，無需再次修習</div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function courseSelectorApp() {
+    return {
+        termid: 72,
+        departmentid: '',
+        keyward: '',
+        sectionid: '',
+        call_id: '',
+        teaName: '',
+        cName: '',
+        courseYear: '',
+        fieldid: '',
+        week: '',
+        stime: '',
+        etime: '',
+        englishOnly: false,
+        advancedOpen: false,
+        departments: [],
+        results: [],
+        cart: [],
+        takenInfo: {},
+        loading: false,
+        searched: false,
+        selectedCourse: null,
+        draggedCourse: null,
+        draggedIndex: null,
+
+        terms: [
+            { termid: 72, label: '115 / 1' },
+            { termid: 71, label: '114 / 3' },
+            { termid: 70, label: '114 / 2' },
+            { termid: 69, label: '114 / 1' },
+            { termid: 68, label: '113 / 3' },
+            { termid: 67, label: '113 / 2' },
+            { termid: 66, label: '113 / 1' },
+            { termid: 65, label: '112 / 3' },
+            { termid: 64, label: '112 / 2' },
+            { termid: 63, label: '112 / 1' },
+        ],
+        officialPeriods: [
+            { value: '1', startLabel: '1 (08:10)', endLabel: '1 (09:00)' },
+            { value: '2', startLabel: '2 (09:10)', endLabel: '2 (10:00)' },
+            { value: '3', startLabel: '3 (10:10)', endLabel: '3 (11:00)' },
+            { value: '4', startLabel: '4 (11:10)', endLabel: '4 (12:00)' },
+            { value: '5', startLabel: '5 (13:10)', endLabel: '5 (14:00)' },
+            { value: '6', startLabel: '6 (14:10)', endLabel: '6 (15:00)' },
+            { value: '7', startLabel: '7 (15:10)', endLabel: '7 (16:00)' },
+            { value: '8', startLabel: '8 (16:10)', endLabel: '8 (17:00)' },
+            { value: '9', startLabel: '9 (17:10)', endLabel: '9 (18:00)' },
+            { value: '10', startLabel: '10 (18:10)', endLabel: '10 (19:00)' },
+            { value: '11', startLabel: '11 (19:10)', endLabel: '11 (20:00)' },
+            { value: '12', startLabel: '12 (20:10)', endLabel: '12 (21:00)' },
+            { value: '13', startLabel: '13 (21:10)', endLabel: '13 (22:00)' },
+        ],
+        fields: [
+            { id: 'L1', name: '(112核心)藝術與人文思維' },
+            { id: 'L2', name: '(112核心)公民與社會探究' },
+            { id: 'L3', name: '(112多元)人文藝術' },
+            { id: 'L4', name: '(112多元)社會科學' },
+            { id: 'L5', name: '(112多元)自然科學' },
+            { id: 'L6', name: '(112多元)跨領域學習與實踐' },
+            { id: 'L7', name: '(112多元)運算思維' },
+            { id: 'LE', name: '(112)英文領域' },
+            { id: 'M1', name: '(114核心)藝術與人文思維' },
+            { id: 'M2', name: '(114核心)公民與社會探究' },
+            { id: 'M3', name: '(114多元)人文藝術' },
+            { id: 'M4', name: '(114多元)社會科學' },
+            { id: 'M6', name: '(114多元)跨領域學習與實踐' },
+            { id: 'M7', name: '(114多元)運算思維' },
+            { id: 'NG', name: '非通識學分課程' },
+            { id: 'SM', name: '軍訓課程' },
+            { id: 'SP', name: '體育課程' },
+        ],
+
+        periods: [
+            { num: 1, time: '08:10' }, { num: 2, time: '09:10' }, { num: 3, time: '10:10' },
+            { num: 4, time: '11:10' }, { num: 5, time: '12:10' }, { num: 6, time: '13:10' },
+            { num: 7, time: '14:10' }, { num: 8, time: '15:10' }, { num: 9, time: '16:10' },
+            { num: 10, time: '17:10' }, { num: 11, time: '18:20' }, { num: 12, time: '19:15' },
+            { num: 13, time: '20:10' }, { num: 14, time: '21:05' }
+        ],
+        days: ['一', '二', '三', '四', '五', '六'],
+
+        get totalCredits() {
+            return this.cart.reduce((sum, c) => sum + (parseFloat(c.CREDITS) || 0), 0);
+        },
+
+        init() {
+            this.loadDepartments();
+            this.loadTakenInfo();
+            this.loadCart();
+            this.$nextTick(() => this.renderSchedule());
+            this.$watch('cart', () => this.renderSchedule());
+        },
+
+        renderSchedule() {
+            const tbody = document.getElementById('scheduleBody');
+            if (!tbody) return;
+
+            let html = '';
+            for (const period of this.periods) {
+                const isEvening = period.num >= 11;
+                html += `<tr class="${isEvening ? 'bg-gray-50' : ''}">`;
+                html += `<td class="p-2 text-center text-gray-600 font-medium bg-[#F9F9F9] border border-gray-200 text-sm">${period.time}</td>`;
+
+                for (const day of this.days) {
+                    const courses = this.getCoursesAt(day, period.num);
+                    const hasCourse = courses.length > 0;
+                    html += `<td class="border border-gray-200 p-1 min-w-[80px] h-12 align-top ${hasCourse ? 'bg-orange-50' : 'hover:bg-gray-50'}"
+                                @dragover.prevent @drop="dropOnSchedule($event, '${day}', ${period.num})">`;
+                    for (const c of courses) {
+                        html += `<div class="bg-[#E39800] text-white text-xs px-2 py-1 rounded cursor-pointer truncate hover:bg-[#C48400] mb-1 shadow-sm"
+                                     @click="removeFromCart(getCartCourse('${c.SECTIONID}'))">${c.CCOURSENAME}</div>`;
+                    }
+                    html += '</td>';
+                }
+                html += '</tr>';
+            }
+            tbody.innerHTML = html;
+        },
+
+        getCartCourse(sectionId) {
+            return this.cart.find(c => c.SECTIONID === sectionId);
+        },
+
+        getCoursesAt(day, period) {
+            return this.cart.filter(c => {
+                const slots = this.parseCourseTime(c.C_PTIME || '');
+                return slots.some(slot => slot.day === day && slot.period === period);
+            });
+        },
+
+        parseCourseTime(time) {
+            const slots = [];
+            if (!time) return slots;
+
+            // 節次時間對照表 (開始時間 -> 節次)
+            const timeToPeriod = {
+                '08:10': 1, '09:10': 2, '10:10': 3, '11:10': 4,
+                '12:10': 5, '13:10': 6, '14:10': 7, '15:10': 8,
+                '16:10': 9, '17:10': 10, '18:20': 11, '19:15': 12,
+                '20:10': 13, '21:05': 14
+            };
+
+            // 將時間字串轉換為分鐘數
+            const timeToMinutes = (t) => {
+                const match = t.match(/(\d{1,2}):(\d{2})/);
+                if (!match) return null;
+                return parseInt(match[1]) * 60 + parseInt(match[2]);
+            };
+
+            // 找出時間對應的節次範圍
+            const getTimePeriods = (startTime, endTime) => {
+                const startMin = timeToMinutes(startTime);
+                const endMin = timeToMinutes(endTime);
+                if (startMin === null || endMin === null) return [];
+
+                const periodStartTimes = [
+                    '08:10', '09:10', '10:10', '11:10', '12:10',
+                    '13:10', '14:10', '15:10', '16:10', '17:10',
+                    '18:20', '19:15', '20:10', '21:05'
+                ];
+
+                const periods = [];
+                for (let i = 0; i < periodStartTimes.length; i++) {
+                    const periodStart = timeToMinutes(periodStartTimes[i]);
+                    // 節次結束時間 = 下一節開始時間 或 該節結束時間
+                    const periodEnd = i < periodStartTimes.length - 1
+                        ? timeToMinutes(periodStartTimes[i + 1])
+                        : periodStart + 50;
+
+                    // 如果課程時間範圍與此節次有重疊
+                    if (startMin < periodEnd && endMin > periodStart) {
+                        periods.push(i + 1);
+                    }
+                }
+                return periods;
+            };
+
+            const dayChars = ['一', '二', '三', '四', '五', '六', '日'];
+
+            // 解析格式: "四 13:10-16:00" 或 "一 08:10-10:00,三 14:10-16:00"
+            // 先用逗號分割不同天的課程
+            const parts = time.split(',');
+
+            for (const part of parts) {
+                let trimmed = part.trim();
+
+                // 找星期
+                let day = null;
+                for (const d of dayChars) {
+                    if (trimmed.includes(d)) {
+                        day = d;
+                        break;
+                    }
+                }
+                if (!day) continue;
+
+                // 找時間範圍 (格式: HH:MM-HH:MM)
+                const timeMatch = trimmed.match(/(\d{1,2}:\d{2})\s*[-~至]\s*(\d{1,2}:\d{2})/);
+                if (timeMatch) {
+                    const startTime = timeMatch[1];
+                    const endTime = timeMatch[2];
+                    const periods = getTimePeriods(startTime, endTime);
+                    for (const p of periods) {
+                        slots.push({ day, period: p });
+                    }
+                } else {
+                    // 嘗試舊格式: "四10,11,12" (節次數字)
+                    const dayIndex = trimmed.indexOf(day);
+                    let rest = trimmed.slice(dayIndex + 1);
+                    rest = rest.replace(/第|節/g, '').replace(/^\//, '');
+
+                    const rangeMatch = rest.match(/(\d+)\s*[-~至]\s*(\d+)/);
+                    if (rangeMatch) {
+                        const start = parseInt(rangeMatch[1]);
+                        const end = parseInt(rangeMatch[2]);
+                        for (let p = start; p <= end; p++) {
+                            if (p >= 1 && p <= 14) slots.push({ day, period: p });
+                        }
+                    } else {
+                        const periodMatches = rest.match(/\d+/g);
+                        if (periodMatches) {
+                            for (const pStr of periodMatches) {
+                                const p = parseInt(pStr);
+                                if (p >= 1 && p <= 14) slots.push({ day, period: p });
+                            }
+                        }
+                    }
+                }
+            }
+            return slots;
+        },
+
+        async loadDepartments() {
+            try {
+                this.departmentid = '';
+                const resp = await fetch(`/catalog/departments?termid=${this.termid}`);
+                this.departments = await resp.json();
+            } catch (e) { console.error('載入開課單位失敗', e); }
+        },
+
+        async loadTakenInfo() {
+            try {
+                const resp = await fetch('/catalog/taken-courses');
+                this.takenInfo = await resp.json();
+            } catch (e) { console.error('載入已修課程失敗', e); }
+        },
+
+        loadCart() {
+            const saved = localStorage.getItem('courseCart');
+            if (saved) this.cart = JSON.parse(saved);
+        },
+
+        saveCart() {
+            localStorage.setItem('courseCart', JSON.stringify(this.cart));
+        },
+
+        async search() {
+            this.loading = true;
+            this.searched = true;
+            try {
+                const params = new URLSearchParams({ termid: this.termid });
+                if (this.departmentid) params.append('departmentid', this.departmentid);
+                if (this.keyward) params.append('keyward', this.keyward);
+                if (this.sectionid) params.append('sectionid', this.sectionid);
+                if (this.call_id) params.append('call_id', this.call_id);
+                if (this.teaName) params.append('teaName', this.teaName);
+                if (this.cName) params.append('cName', this.cName);
+                if (this.courseYear) params.append('year', this.courseYear);
+                if (this.fieldid) params.append('fieldid', this.fieldid);
+                if (this.week) params.append('week', this.week);
+                if (this.stime) params.append('stime', this.stime);
+                if (this.etime) params.append('etime', this.etime);
+                if (this.englishOnly) params.append('lang', 'E');
+                const resp = await fetch(`/catalog/search?${params}`);
+                this.results = await resp.json();
+            } catch (e) { console.error('搜尋失敗', e); this.results = []; }
+            finally { this.loading = false; }
+        },
+
+        addToCart(course) {
+            if (!this.cart.find(c => c.SECTIONID === course.SECTIONID)) {
+                this.cart.push({ ...course });
+                this.saveCart();
+                this.renderSchedule();
+            }
+        },
+
+        removeFromCart(course) {
+            this.cart = this.cart.filter(c => c.SECTIONID !== course.SECTIONID);
+            this.saveCart();
+            this.renderSchedule();
+        },
+
+        clearCart() {
+            if (confirm('確定要清空預選清單？')) {
+                this.cart = [];
+                this.saveCart();
+                this.renderSchedule();
+            }
+        },
+
+        exportCart() {
+            if (this.cart.length === 0) { alert('預選清單為空'); return; }
+            const text = this.cart.map((c, i) => `${i + 1}. ${c.CCOURSENAME} (${c.C_PTIME}) - ${c.CREDITS}學分`).join('\n');
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = '預選清單.txt'; a.click();
+            URL.revokeObjectURL(url);
+        },
+
+        showDetail(course) { this.selectedCourse = course; },
+
+        dragStart(e, course) { this.draggedCourse = course; e.dataTransfer.effectAllowed = 'copy'; },
+
+        dropOnSchedule(e, day, period) {
+            if (this.draggedCourse) {
+                this.addToCart(this.draggedCourse);
+                this.draggedCourse = null;
+            }
+        },
+
+        dropOnList(e) {
+            if (this.draggedCourse) {
+                this.addToCart(this.draggedCourse);
+                this.draggedCourse = null;
+            }
+        },
+
+        dragStartReorder(e, index) { this.draggedIndex = index; e.dataTransfer.effectAllowed = 'move'; },
+
+        dropReorder(e, targetIndex) {
+            if (this.draggedIndex !== null && this.draggedIndex !== targetIndex) {
+                const item = this.cart.splice(this.draggedIndex, 1)[0];
+                this.cart.splice(targetIndex, 0, item);
+                this.saveCart();
+                this.renderSchedule();
+            }
+            this.draggedIndex = null;
+        }
+    };
+}
+</script>
+{% endblock %}
