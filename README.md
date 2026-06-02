@@ -7,8 +7,8 @@
 - **登入同步**：使用 MOOCS 帳號登入，自動抓取修課紀錄與課表
 - **已修課程**：列出所有已修課程、成績、學分
 - **課程查詢**：搜尋長庚大學開課課程（呼叫課程目錄 API）
-- **畢業進度**：依畢業規定分類統計已修學分（開發中）
-- **選課建議**：根據尚未修習的必修科目給出建議（開發中）
+- **畢業進度**：依畢業規定分類統計已修學分（開發中，詳見 [Graduation-Credit-Calculator](https://github.com/WeiChengTW/Graduation-Credit-Calculator)）
+- **選課建議**：根據尚未修習的必修科目給出建議（開發中，詳見 [Graduation-Credit-Calculator](https://github.com/WeiChengTW/Graduation-Credit-Calculator)）
 
 ## 快速開始
 
