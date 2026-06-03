@@ -1,0 +1,42 @@
+{% set status = analysis_status.get('status', 'none') %}
+
+{% if status == 'analyzing' %}
+<div id="status-container"
+     hx-get="/graduation/status"
+     hx-trigger="every 4s"
+     hx-swap="outerHTML">
+    <div class="bg-white rounded-lg shadow border border-gray-200 p-10 text-center">
+        <div class="inline-block w-16 h-16 border-4 border-[#E39800] border-t-transparent rounded-full animate-spin mb-6"></div>
+        <h2 class="text-xl font-semibold text-[#333333] mb-2">分析進行中</h2>
+        <p class="text-gray-500">{{ analysis_status.get('message', '請稍候...') }}</p>
+        <p class="text-xs text-gray-400 mt-4">通常需要 2-5 分鐘，請勿關閉頁面</p>
+    </div>
+</div>
+
+{% elif status == 'error' %}
+<div id="status-container">
+    <div class="bg-red-50 border border-red-200 rounded-lg p-6 mb-6">
+        <h2 class="text-lg font-semibold text-red-800 mb-2">分析失敗</h2>
+        <p class="text-red-700 text-sm">{{ analysis_status.get('message', '發生未知錯誤') }}</p>
+    </div>
+    <form method="post" action="/graduation/reset">
+        <button type="submit"
+                class="bg-gray-600 hover:bg-gray-700 text-white font-semibold px-6 py-2 rounded-lg transition">
+            重新上傳
+        </button>
+    </form>
+</div>
+
+{% elif status == 'done' and report %}
+<div id="status-container">
+    {% include "graduation_result_partial.html" %}
+</div>
+
+{% else %}
+<div id="status-container"
+     hx-get="/graduation/status"
+     hx-trigger="every 4s"
+     hx-swap="outerHTML">
+    <div class="text-center text-gray-400 py-8">載入中...</div>
+</div>
+{% endif %}

@@ -1,0 +1,143 @@
+{% set r = report %}
+<div x-data="graduationApp()" x-init="init()" class="space-y-6">
+
+    <!-- 頂部狀態 + 重新分析 -->
+    <div class="flex items-center justify-between">
+        <div>
+            <span class="px-3 py-1 rounded-full text-sm font-semibold
+                {% if r.status == '符合畢業資格' %}bg-green-100 text-green-800
+                {% else %}bg-orange-100 text-[#C48400]{% endif %}">
+                {{ r.status }}
+            </span>
+        </div>
+        <form method="post" action="/graduation/reset">
+            <button type="submit"
+                    class="text-sm text-gray-500 hover:text-gray-700 underline">
+                重新分析
+            </button>
+        </form>
+    </div>
+
+    <!-- 概覽卡片 -->
+    <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h2 class="text-xl font-semibold text-[#333333]">學分概覽</h2>
+                <p class="text-gray-500 mt-1 text-sm">{{ r.one_sentence_summary }}</p>
+            </div>
+            <div class="text-right">
+                <div class="text-4xl font-bold {% if r.recognized_credits >= r.required_credits %}text-green-600{% else %}text-[#E39800]{% endif %}">
+                    {{ r.recognized_credits }} / {{ r.required_credits }}
+                </div>
+                <div class="text-sm text-gray-500">已認列 / 需要</div>
+            </div>
+        </div>
+        {% set pct = [(r.recognized_credits / r.required_credits * 100) | round | int, 100] | min %}
+        <div class="overflow-hidden h-3 rounded bg-orange-100">
+            <div class="h-3 rounded bg-gradient-to-r from-[#E39800] to-[#C48400] transition-all"
+                 style="width: {{ pct }}%"></div>
+        </div>
+        <p class="text-right text-xs text-gray-400 mt-1">{{ pct }}%</p>
+    </div>
+
+    <!-- 各類別完成狀況 -->
+    {% if r.requirements %}
+    <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+        <h3 class="text-lg font-semibold text-[#333333] mb-4">各類別完成狀況</h3>
+        <div class="space-y-4">
+            {% for req in r.requirements %}
+            <div>
+                <div class="flex justify-between text-sm mb-1">
+                    <span class="font-medium text-gray-700">{{ req.category }}</span>
+                    <span class="{% if req.status == '已完成' %}text-green-600{% else %}text-[#C48400]{% endif %} font-medium">
+                        {{ req.status }}
+                    </span>
+                </div>
+                <div class="text-xs text-gray-500 mb-1">
+                    完成：{{ req.completed }} ｜ 需要：{{ req.required }}
+                    {% if req.missing %} ｜ 缺少：{{ req.missing }}{% endif %}
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div class="h-2 rounded-full {% if req.status == '已完成' %}bg-green-500{% else %}bg-[#E39800]{% endif %}"
+                         style="width: {{ 100 if req.status == '已完成' else 60 }}%"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 缺修課程 -->
+    {% if r.missing_items %}
+    <div class="bg-white rounded-lg shadow overflow-hidden border border-gray-200">
+        <div class="px-4 py-3 bg-gray-50 border-b">
+            <h3 class="font-semibold text-[#333333]">缺修項目</h3>
+        </div>
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">優先級</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">類別</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">缺少項目</th>
+                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">學分</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">建議動作</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for item in r.missing_items %}
+                <tr class="hover:bg-orange-50">
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-1 rounded text-xs
+                            {% if item.priority in ('high', '高') %}bg-red-100 text-red-800
+                            {% elif item.priority in ('medium', '中') %}bg-orange-100 text-[#C48400]
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ item.priority }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-700">{{ item.category }}</td>
+                    <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ item.item }}</td>
+                    <td class="px-4 py-3 text-sm text-center text-gray-700">{{ item.credits }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">{{ item.recommended_action }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- 下學期選課建議 -->
+    {% if r.next_semester_recommendations %}
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h3 class="font-semibold text-blue-800 mb-2">下學期選課建議</h3>
+        <ul class="space-y-1">
+            {% for rec in r.next_semester_recommendations %}
+            <li class="text-sm text-blue-700">• {{ rec }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- 需人工確認 -->
+    {% if r.manual_review_items %}
+    <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+        <h3 class="font-semibold text-orange-800 mb-2">⚠ 需人工確認</h3>
+        <ul class="space-y-1">
+            {% for item in r.manual_review_items %}
+            <li class="text-sm text-orange-700">
+                <span class="font-medium">{{ item.item }}</span> - {{ item.reason }}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <p class="text-xs text-gray-400 text-center">
+        本報告由 LLM 根據提供資料分析，正式畢業資格仍以系辦/教務處認定為準。
+    </p>
+</div>
+
+<script>
+function graduationApp() {
+    return { init() {} };
+}
+</script>
