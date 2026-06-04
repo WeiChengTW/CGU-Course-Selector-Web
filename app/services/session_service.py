@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import json
 import re
 import shutil
@@ -198,7 +199,6 @@ def get_session_profile(request: Request) -> dict:
     if session_dir:
         booking_path = session_dir / "icgu_booking.csv"
         if booking_path.exists():
-            import csv
             with booking_path.open("r", encoding="utf-8-sig") as f:
                 booking_count = sum(1 for _ in csv.DictReader(f))
     return {

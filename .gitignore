@@ -15,6 +15,14 @@ env/
 # Data and personal files
 data/sessions/
 
+# Development scratch scripts and debug screenshots
+scratch_*.py
+*.png
+!data/rules/*.pdf
+
+# Node
+node_modules/
+
 # Playwright browsers
 .playwright/
 

@@ -45,6 +45,23 @@ def summarize_courses(csv_path: Path) -> str:
     for cat, val in category_counts.items():
         summary.append(f"- {cat}: {val:g} 學分")
 
+    # 抵免學分概要
+    exemption_rows = [r for r in courses if r.get("成績", "") == "抵免"]
+    if exemption_rows:
+        summary.append("")
+        summary.append("#### 抵免學分")
+        total_exempt = 0.0
+        for r in exemption_rows:
+            name = r.get("課程名稱", "")
+            try:
+                cr = float(r.get("學分", "0") or "0")
+            except ValueError:
+                cr = 0.0
+            total_exempt += cr
+            cat = r.get("課程類別", "抵免類型未知")
+            summary.append(f"- {name}：{cr:g} 學分（{cat}）")
+        summary.append(f"- 抵免學分合計：{total_exempt:g} 學分")
+
     summary.append("")
     summary.append("#### 重複修課 (重修或同名)")
     duplicates = {name: count for name, count in name_counts.items() if count > 1}

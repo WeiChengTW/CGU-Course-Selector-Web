@@ -10,7 +10,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from app.config import BASE_DIR
+from app.config import BASE_DIR, get_logger
+from app.lib.grade_utils import is_passed
+
+logger = get_logger(__name__)
 
 DEFAULT_LLM_BASE_URL = os.getenv("LLM_BASE_URL", "https://air.cgu.edu.tw/cgullmapi/v1")
 DEFAULT_LLM_MODEL = os.getenv("LLM_MODEL", "gpt-5.4-mini")
@@ -18,6 +21,8 @@ DEFAULT_RULES_DIR = BASE_DIR / "data" / "rules"
 
 STATUS_FILE = "graduation_status.json"
 REPORT_FILE = "graduation_report.json"
+REPORT_MD_FILE = "graduation_report.md"
+REPORT_RAW_FILE = "graduation_report_raw.txt"
 GRAD_PDF_FILE = "graduation_pdf.pdf"
 HONOR_PDF_FILE = "graduation_honor_pdf.pdf"
 MERGED_CSV_FILE = "graduation_merged.csv"
@@ -58,7 +63,7 @@ class GraduationService:
         self.status_path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
 
     def reset(self) -> None:
-        for fname in (REPORT_FILE, STATUS_FILE, MERGED_CSV_FILE, RULES_INDEX_FILE):
+        for fname in (REPORT_FILE, REPORT_MD_FILE, REPORT_RAW_FILE, STATUS_FILE, MERGED_CSV_FILE, RULES_INDEX_FILE):
             p = self.data_dir / fname
             if p.exists():
                 p.unlink()
@@ -72,10 +77,40 @@ class GraduationService:
             shutil.rmtree(rules_md)
 
 
+EXEMPTION_TYPE_MAP = {
+    "系定必修": "系定必修",
+    "系必修": "系定必修",
+    "校定必修": "校定必修",
+    "校必修": "校定必修",
+    "系定選修": "系定選修",
+    "系選修": "系定選修",
+    "校定選修": "校定選修",
+    "校選修": "校定選修",
+    "通識必修": "校定必修",
+    "通識選修": "校定選修",
+    "通識": "校定選修",
+}
+
+
+def _map_exemption_type_to_category(ex_type: str) -> str:
+    """Map iCGU exemption type to graduation analysis course category."""
+    ex_type = ex_type.strip()
+    if ex_type in EXEMPTION_TYPE_MAP:
+        return EXEMPTION_TYPE_MAP[ex_type]
+    if "系定" in ex_type or "系必修" in ex_type:
+        return "系定必修" if "必修" in ex_type else "系定選修"
+    if "校定" in ex_type or "校必修" in ex_type:
+        return "校定必修" if "必修" in ex_type else "校定選修"
+    if "通識" in ex_type:
+        return "校定必修" if "必修" in ex_type else "校定選修"
+    return ""
+
+
 def _merge_course_csv(session_dir: Path) -> Path:
-    """Merge taken_courses.csv + courses_detail.csv into a combined CSV for LLM analysis."""
+    """Merge taken_courses.csv + courses_detail.csv + icgu_exemptions.csv into a combined CSV for LLM analysis."""
     taken_path = session_dir / "taken_courses.csv"
     detail_path = session_dir / "courses_detail.csv"
+    exemption_path = session_dir / "icgu_exemptions.csv"
     output_path = session_dir / MERGED_CSV_FILE
 
     taken_rows: list[dict] = []
@@ -92,19 +127,6 @@ def _merge_course_csv(session_dir: Path) -> Path:
                 if name:
                     detail_map[f"{term}:{name}"] = row
 
-    def _is_passed(score: str) -> bool:
-        if not score:
-            return False
-        score = score.strip().upper()
-        if score in ("S", "I"):
-            return False
-        if score in ("P", "通過", "及格"):
-            return True
-        try:
-            return float(score) >= 60
-        except ValueError:
-            return False
-
     merged: list[dict] = []
     for row in taken_rows:
         name = row.get("課程名稱", "").strip()
@@ -115,7 +137,7 @@ def _merge_course_csv(session_dir: Path) -> Path:
         detail = detail_map.get(f"{term}:{name}") or detail_map.get(f":{name}") or {}
         credits = detail.get("學分", "") or credits_raw
         category = detail.get("課程類別", "")
-        passed = _is_passed(score)
+        passed = is_passed(score)
 
         merged.append({
             "學年學期": term,
@@ -125,6 +147,32 @@ def _merge_course_csv(session_dir: Path) -> Path:
             "是否通過": str(passed),
             "課程類別": category,
         })
+
+    # 合併核准的抵免學分
+    if exemption_path.exists():
+        with exemption_path.open("r", encoding="utf-8-sig", newline="") as f:
+            exemption_rows = list(csv.DictReader(f))
+        for ex in exemption_rows:
+            status = (ex.get("核准狀態") or "").strip()
+            if status not in {"已核准", "核准", "通過"}:
+                continue
+            name = (ex.get("課程名稱") or "").strip()
+            if not name:
+                continue
+            # 避免重複：如果 taken_rows 已有同名課程則跳過
+            if any(r.get("課程名稱", "").strip() == name for r in taken_rows):
+                continue
+            credits = ex.get("學分數", "").strip()
+            ex_type = (ex.get("抵免類型") or "").strip()
+            category = _map_exemption_type_to_category(ex_type)
+            merged.append({
+                "學年學期": (ex.get("學年學期") or "").replace("-", ""),
+                "課程名稱": name,
+                "學分": credits,
+                "成績": "抵免",
+                "是否通過": "True",
+                "課程類別": category,
+            })
 
     with output_path.open("w", encoding="utf-8-sig", newline="") as f:
         writer = csv.DictWriter(
@@ -223,5 +271,5 @@ def run_graduation_analysis(
 
     except Exception as e:
         error_msg = str(e)
-        print(f"畢業分析失敗：{traceback.format_exc()}")
+        logger.error("graduation_analysis_failed", error=str(e), traceback=traceback.format_exc())
         svc.write_status("error", f"分析失敗：{error_msg[:200]}")

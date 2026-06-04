@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import csv
-import json
-import sys
 import time
-import urllib.parse
-import urllib.request
+import httpx
 from pathlib import Path
 
+from app.config import get_logger
 from lib.scraper import read_courses
 from lib.utils import ensure_parent
+
+logger = get_logger(__name__)
 
 CATALOG_API = "https://catalog.cgu.edu.tw/IsService/api/Course/GetCourseSections"
 
@@ -53,7 +53,7 @@ def term_id_for(year: str, term: str, term_map: dict | None = None) -> int:
     )
 
 
-def fetch_course(termid: int, sectionid: str = "", call_id: str = "") -> dict:
+def fetch_course(termid: int, sectionid: str = "", call_id: str = "", name: str = "") -> dict:
     params = {
         "termid": str(termid),
         "departmentid": "",
@@ -61,20 +61,39 @@ def fetch_course(termid: int, sectionid: str = "", call_id: str = "") -> dict:
         "keyward": "",
         "sectionid": sectionid,
         "teaName": "",
-        "cName": "",
+        "cName": name,
         "year": "",
         "fieldid": "",
         "week": "",
         "stime": "",
         "etime": "",
     }
-    url = f"{CATALOG_API}?{urllib.parse.urlencode(params)}"
-    request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    with urllib.request.urlopen(request, timeout=20) as response:
-        payload = json.loads(response.read().decode("utf-8"))
+    with httpx.Client(timeout=20.0) as client:
+        response = client.get(CATALOG_API, params=params, headers={"User-Agent": "Mozilla/5.0"})
+        payload = response.json()
 
     if not payload:
-        raise LookupError(f"查無資料：termid={termid}, sectionid={sectionid}, call_id={call_id}")
+        # Fallback: search by name if initial query returned nothing
+        if name and not sectionid and not call_id:
+            params_fb = {
+                "termid": str(termid),
+                "departmentid": "",
+                "call_id": "",
+                "keyward": "",
+                "sectionid": "",
+                "teaName": "",
+                "cName": name,
+                "year": "",
+                "fieldid": "",
+                "week": "",
+                "stime": "",
+                "etime": "",
+            }
+            with httpx.Client(timeout=20.0) as client:
+                response = client.get(CATALOG_API, params=params_fb, headers={"User-Agent": "Mozilla/5.0"})
+                payload = response.json()
+            if not payload:
+                raise LookupError(f"查無資料：termid={termid}, name={name}")
     if isinstance(payload, dict):
         payload = [payload]
 
@@ -98,9 +117,7 @@ def fetch_course(termid: int, sectionid: str = "", call_id: str = "") -> dict:
             f"API 回傳資料中找不到精準項目：termid={termid}, sectionid={sectionid}, call_id={call_id}"
         )
     if len(exact_matches) > 1:
-        print(
-            f"警告：API 回傳多筆符合的課程，採用第一筆。", file=sys.stderr
-        )
+        logger.warning("multiple_api_matches", termid=termid, sectionid=sectionid)
     return exact_matches[0]
 
 
@@ -139,7 +156,7 @@ def write_details(
         )
         try:
             termid = term_id_for(course["year"], course["term"], term_map)
-            data = fetch_course(termid, sectionid=course.get("sectionid", ""), call_id=course.get("call_id", ""))
+            data = fetch_course(termid, sectionid=course.get("sectionid", ""), call_id=course.get("call_id", ""), name=course.get("name", ""))
 
             api_name = data.get("CCOURSENAME", "")
             if (
@@ -148,17 +165,14 @@ def write_details(
                 and course["name"].lower() not in api_name.lower()
                 and api_name.lower() not in course["name"].lower()
             ):
-                print(
-                    f"警告：課名 '{course['name']}' 與 API 回傳課名 '{api_name}' 不一致",
-                    file=sys.stderr,
-                )
+                logger.warning("course_name_mismatch", expected=course['name'], api=api_name)
 
             rows.append(detail_row(course, data))
             total_credits += float(data.get("CREDITS") or 0)
-            print(f"[{index}/{len(courses)}] OK  {label}")
+            logger.info("catalog_query_ok", index=index, total=len(courses), label=label)
         except Exception as exc:
             errors.append(f"{label}: {exc}")
-            print(f"[{index}/{len(courses)}] ERR {label}: {exc}", file=sys.stderr)
+            logger.error("catalog_query_failed", index=index, total=len(courses), label=label, error=str(exc))
         if delay and index < len(courses):
             time.sleep(delay)
 

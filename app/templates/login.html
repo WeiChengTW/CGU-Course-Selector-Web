@@ -39,6 +39,7 @@
                 </div>
 
                 <form method="post" action="/login" class="space-y-4" @submit="loading = true">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                     <div>
                         <label for="username" class="block text-sm font-semibold text-[#333333] mb-1">M365 帳號</label>
                         <input
@@ -108,6 +109,7 @@
                 </div>
 
                 <form method="post" action="/login/icgu" @submit="loading = true">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                     <button
                         type="submit"
                         class="w-full rounded-lg bg-[#3B5BDB] px-4 py-2.5 font-semibold text-white shadow hover:bg-[#2F4AC0] focus:outline-none focus:ring-2 focus:ring-[#748FFC] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 transition text-sm"

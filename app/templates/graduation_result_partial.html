@@ -12,9 +12,10 @@
                 {{ r.status }}
             </span>
         </div>
-        <form method="post" action="/graduation/reset">
+        <form method="post" action="/graduation/reset" x-data @submit="$event.target.querySelector('button').disabled = true">
+            <input type="hidden" name="csrf_token" :value="document.querySelector('meta[name=csrf-token]')?.content || ''">
             <button type="submit"
-                    class="text-sm text-gray-500 hover:text-gray-700 underline">
+                    class="text-sm text-gray-500 hover:text-gray-700 underline disabled:opacity-50">
                 重新分析
             </button>
         </form>

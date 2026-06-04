@@ -2,10 +2,13 @@
 
 import asyncio
 
-from fastapi import APIRouter, Form, Request
+from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi_csrf_protect import CsrfProtect
 
+from app.config import get_logger
 from app.services.catalog_service import CatalogService
+from app.lib.grade_utils import get_status, calculate_gpa
 from app.services.course_service import CourseService
 from app.services.moocs_sync_service import sync_moocs_courses
 from app.services.session_service import (
@@ -19,6 +22,7 @@ from app.services.session_service import (
 )
 from app.templates_config import render_template
 
+logger = get_logger(__name__)
 router = APIRouter()
 
 
@@ -49,12 +53,22 @@ async def get_courses_data(request: Request):
         return JSONResponse({"error": "請先登入"}, status_code=401)
 
     courses = CourseService(session_dir).get_courses()
+    for c in courses:
+        c["_status"] = get_status(c.get("修課成績", ""))
+    gpa_info = calculate_gpa(courses)
     meta = load_session_meta(session_dir)
-    return {"courses": courses, "last_synced_at": meta.get("last_synced_at", "")}
+    return {"courses": courses, "gpa": gpa_info, "last_synced_at": meta.get("last_synced_at", "")}
 
 
 @router.post("/refresh", response_class=JSONResponse)
-async def refresh_courses(request: Request, password: str = Form(...)):
+async def refresh_courses(
+    request: Request,
+    csrf_protect: CsrfProtect = Depends(),
+    password: str = Form(...)
+):
+    # 驗證 CSRF token
+    await csrf_protect.validate_csrf(request)
+
     session_dir = get_session_dir(request)
     if session_dir is None:
         return JSONResponse({"error": "請先登入"}, status_code=401)
@@ -71,23 +85,42 @@ async def refresh_courses(request: Request, password: str = Form(...)):
             password=password,
             session_dir=session_dir,
         )
+        logger.info("courses_refresh_success", username=username)
     except Exception as exc:
+        logger.error("courses_refresh_failed", username=username, error=str(exc))
         return JSONResponse({"error": f"同步失敗：{str(exc)[:200]}"}, status_code=400)
 
     save_course_record(username, session_dir, sync_result)
     updated_meta = update_session_sync_meta(session_dir, sync_result)
     courses = CourseService(session_dir).get_courses()
+    for c in courses:
+        c["_status"] = get_status(c.get("修課成績", ""))
+    gpa_info = calculate_gpa(courses)
     return {
         "ok": True,
         "message": "已重新同步校務成績紀錄",
         "courses": courses,
+        "gpa": gpa_info,
         "last_synced_at": updated_meta.get("last_synced_at", ""),
     }
 
 
 @router.post("/import-booking", response_class=JSONResponse)
-async def import_booking(request: Request):
+async def import_booking(request: Request, csrf_protect: CsrfProtect = Depends()):
     import csv
+    import json
+
+    # 驗證 CSRF token
+    await csrf_protect.validate_csrf(request)
+
+    # Read termid from request body (JSON) or default to 72
+    body_bytes = await request.body()
+    termid = 72
+    try:
+        body = json.loads(body_bytes)
+        termid = int(body.get("termid", 72))
+    except (json.JSONDecodeError, ValueError, TypeError):
+        pass
 
     session_dir = get_session_dir(request)
     if session_dir is None:
@@ -111,7 +144,7 @@ async def import_booking(request: Request):
             course = None
             if section_id:
                 try:
-                    matches = CatalogService.search_courses(termid=72, sectionid=section_id)
+                    matches = CatalogService.search_courses(termid=termid, sectionid=section_id)
                     course = next(
                         (item for item in matches if str(item.get("SECTIONID", "")).strip() == section_id),
                         matches[0] if matches else None,
@@ -121,7 +154,7 @@ async def import_booking(request: Request):
 
             if course is None and name:
                 try:
-                    matches = CatalogService.search_courses(termid=72, cName=name)
+                    matches = CatalogService.search_courses(termid=termid, cName=name)
                     course = next(
                         (item for item in matches if item.get("CCOURSENAME", "").strip() == name),
                         matches[0] if matches else None,

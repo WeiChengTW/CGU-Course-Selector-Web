@@ -18,6 +18,7 @@
 
         <form method="post" action="/graduation/analyze" enctype="multipart/form-data"
               x-data="uploadForm()" @submit="submitting = true">
+            <input type="hidden" name="csrf_token" :value="document.querySelector('meta[name=csrf-token]')?.content || ''">
 
             <!-- 畢業學分 PDF -->
             <div class="mb-6">
@@ -104,9 +105,10 @@
         <h2 class="text-lg font-semibold text-red-800 mb-2">分析失敗</h2>
         <p class="text-red-700 text-sm">{{ analysis_status.get('message', '發生未知錯誤') }}</p>
     </div>
-    <form method="post" action="/graduation/reset">
+    <form method="post" action="/graduation/reset" x-data @submit="$event.target.querySelector('button').disabled = true">
+        <input type="hidden" name="csrf_token" :value="document.querySelector('meta[name=csrf-token]')?.content || ''">
         <button type="submit"
-                class="bg-gray-600 hover:bg-gray-700 text-white font-semibold px-6 py-2 rounded-lg transition">
+                class="bg-gray-600 hover:bg-gray-700 text-white font-semibold px-6 py-2 rounded-lg transition disabled:opacity-50">
             重新上傳
         </button>
     </form>

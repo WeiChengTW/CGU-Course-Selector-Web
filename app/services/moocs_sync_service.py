@@ -4,6 +4,7 @@ import csv
 from pathlib import Path
 
 from lib.catalog import write_details
+from lib.icgu_scraper import parse_grade_rows, combined_body_text
 from lib.scraper import (
     MOOCS_LOGIN_URL,
     locate_first,
@@ -14,55 +15,8 @@ from lib.scraper import (
 )
 
 
-def parse_grade_rows(text: str) -> list[dict[str, str]]:
-    rows = []
-    seen = set()
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
-    i = 0
-
-    while i < len(lines):
-        line = lines[i]
-        if not line[:4].isdigit() or "-" not in line:
-            i += 1
-            continue
-
-        term, name = line.split("-", 1)
-        if i + 1 >= len(lines):
-            break
-
-        credits = lines[i + 1]
-        score = ""
-        next_index = i + 2
-        if next_index < len(lines) and not (lines[next_index][:4].isdigit() and "-" in lines[next_index]):
-            score = lines[next_index]
-            next_index += 1
-
-        key = (term, name)
-        if key not in seen:
-            seen.add(key)
-            rows.append(
-                {
-                    "學年學期": term,
-                    "課程名稱": name,
-                    "學分數": credits,
-                    "修課成績": score,
-                }
-            )
-        i = next_index
-
-    return rows
-
-
 def _combined_body_text(page) -> str:
-    texts = []
-    for frame in [page, *page.frames]:
-        try:
-            body = frame.locator("body")
-            if body.count() > 0:
-                texts.append(body.inner_text())
-        except Exception:
-            pass
-    return "\n".join(texts)
+    return combined_body_text(page)
 
 
 def _click_first_in_page_or_frame(page, selector: str) -> bool:

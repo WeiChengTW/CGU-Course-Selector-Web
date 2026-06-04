@@ -1,24 +1,10 @@
 """開課查詢服務 - 直接呼叫長庚課程 API"""
 
 import json
-import urllib.parse
-import urllib.request
+import httpx
 from typing import Optional
 
-CATALOG_API = "https://catalog.cgu.edu.tw/IsService/api/Course/GetCourseSections"
-
-TERM_IDS = {
-    (112, 1): 63,
-    (112, 2): 64,
-    (112, 3): 65,
-    (113, 1): 66,
-    (113, 2): 67,
-    (113, 3): 68,
-    (114, 1): 69,
-    (114, 2): 70,
-    (114, 3): 71,
-    (115, 1): 72,
-}
+from lib.catalog import CATALOG_API, TERM_IDS, term_id_for
 
 
 class CatalogService:
@@ -77,10 +63,9 @@ class CatalogService:
     @staticmethod
     def fetch_courses(params: dict) -> list[dict]:
         """依官方 API 參數取得課程"""
-        url = f"{CATALOG_API}?{urllib.parse.urlencode(params)}"
-        request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(request, timeout=30) as response:
-            return json.loads(response.read().decode("utf-8"))
+        with httpx.Client(timeout=30.0) as client:
+            response = client.get(CATALOG_API, params=params, headers={"User-Agent": "Mozilla/5.0"})
+            return response.json()
 
     @staticmethod
     def fetch_all_courses(termid: int) -> list[dict]:

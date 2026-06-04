@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import json
 import time
-import urllib.error
-import urllib.request
+import httpx
 from pathlib import Path
 
+from app.config import get_logger
 from app.lib.graduation.utils import extract_json
+
+logger = get_logger(__name__)
 
 _EXTRACT_SYSTEM = "你是一個文件結構化提取助手。請務必只輸出 JSON，不要有任何其他文字。"
 
@@ -40,18 +42,16 @@ def _call_llm(prompt: str, model: str, base_url: str, api_key: str) -> str:
         ],
         "temperature": 0.1,
     }
-    req = urllib.request.Request(
-        endpoint, data=json.dumps(data).encode("utf-8"), headers=headers, method="POST"
-    )
     for attempt in range(3):
         try:
-            with urllib.request.urlopen(req, timeout=180) as resp:
-                result = json.loads(resp.read().decode("utf-8"))
+            with httpx.Client(timeout=180.0) as client:
+                response = client.post(endpoint, json=data, headers=headers)
+                result = response.json()
                 return result["choices"][0]["message"]["content"]
-        except urllib.error.HTTPError as e:
+        except httpx.HTTPStatusError as e:
             error_body = ""
             try:
-                error_body = e.read().decode("utf-8", errors="replace")
+                error_body = e.response.text
             except Exception:
                 pass
             err_code = ""
@@ -88,7 +88,7 @@ def build_rules_index(
             pass
 
     for p in md_paths:
-        print(f"提取規則索引：{p.name} ...")
+        logger.info("extracting_rules_index", file=p.name)
         content = p.read_text(encoding="utf-8")
         raw = _call_llm(_EXTRACT_USER_TEMPLATE.format(content=content), model, base_url, api_key)
         try:
@@ -96,7 +96,7 @@ def build_rules_index(
             if isinstance(extracted, dict):
                 index.update(extracted)
         except Exception as e:
-            print(f"警告：解析 {p.name} 提取結果失敗 ({e})，略過。")
+            logger.warning("rules_index_parse_failed", file=p.name, error=str(e))
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(index, ensure_ascii=False, indent=2), encoding="utf-8")

@@ -3,6 +3,8 @@
 import csv
 from pathlib import Path
 
+from app.lib.grade_utils import is_passed, is_in_progress, get_status
+
 
 class CourseService:
     def __init__(self, data_dir: Path):
@@ -33,27 +35,6 @@ class CourseService:
     def _get_score(self, course: dict) -> str:
         return (course.get("修課成績") or "").strip()
 
-    def _is_passed(self, score: str) -> bool:
-        """判斷成績是否通過（60分以上或特殊通過標記）"""
-        if not score:
-            return False
-
-        score = score.strip().upper()
-
-        if score in ('S', 'I'):
-            return False
-
-        # 特殊通過標記
-        if score in ('P', '通過', '及格'):
-            return True
-
-        # 嘗試解析數字
-        try:
-            num = float(score)
-            return num >= 60
-        except ValueError:
-            return False
-
     def get_passed_course_names(self) -> set[str]:
         """取得已通過課程名稱集合（學分已拿到）"""
         if self._passed_names_cache is not None:
@@ -66,7 +47,7 @@ class CourseService:
             name = self._get_name(c)
             score = self._get_score(c)
 
-            if name and self._is_passed(score):
+            if name and is_passed(score):
                 self._passed_names_cache.add(name)
 
         return self._passed_names_cache
@@ -98,12 +79,12 @@ class CourseService:
 
         for c in matches:
             score = self._get_score(c)
-            if self._is_passed(score):
+            if is_passed(score):
                 return {"status": "passed", "score": score, "credits": self._get_credits(c)}
 
         for c in matches:
             score = self._get_score(c)
-            if not score or score.upper() == "I":
+            if is_in_progress(score):
                 return {"status": "in_progress", "score": score or None, "credits": self._get_credits(c)}
 
         if matches:
@@ -122,7 +103,7 @@ class CourseService:
         total_passed_credits = 0
         for c in courses:
             score = self._get_score(c)
-            if self._is_passed(score):
+            if is_passed(score):
                 try:
                     total_passed_credits += float(self._get_credits(c) or 0)
                 except ValueError:

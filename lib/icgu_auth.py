@@ -104,8 +104,8 @@ def scrape_icgu_records_interactively(session_dir: Path, headless: bool = False)
                 except Exception:
                     page.wait_for_timeout(1500)
 
-                from app.services.moocs_sync_service import _combined_body_text, parse_grade_rows
-                moocs_grade_rows = parse_grade_rows(_combined_body_text(page))
+                from lib.icgu_scraper import combined_body_text, parse_grade_rows
+                moocs_grade_rows = parse_grade_rows(combined_body_text(page))
 
                 try:
                     name_el = page.locator(".user .name").first

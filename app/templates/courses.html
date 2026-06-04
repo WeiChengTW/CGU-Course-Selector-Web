@@ -37,7 +37,7 @@
     </div>
 
     <!-- 學分統計卡片 -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
         <div class="bg-white rounded-lg shadow p-4 border-t-4 border-[#E39800]">
             <div class="text-sm text-gray-500">總學分</div>
             <div class="text-2xl font-bold text-[#E39800]" x-text="totalCredits">-</div>
@@ -53,6 +53,10 @@
         <div class="bg-white rounded-lg shadow p-4 border-t-4 border-[#333333]">
             <div class="text-sm text-gray-500">課程數</div>
             <div class="text-2xl font-bold text-[#333333]" x-text="courseCount">-</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4 border-t-4 border-blue-500">
+            <div class="text-sm text-gray-500">累計 GPA</div>
+            <div class="text-2xl font-bold text-blue-600" x-text="gpaInfo.gpa || '-'">-</div>
         </div>
     </div>
 
@@ -155,6 +159,7 @@ function coursesApp() {
         filterYear: '',
         filterTerm: '',
         filterStatus: '',
+        gpaInfo: {},
         showRefreshForm: false,
         refreshing: false,
         refreshPassword: '',
@@ -167,6 +172,7 @@ function coursesApp() {
                 const response = await fetch('/courses/data');
                 const data = await response.json();
                 this.courses = Array.isArray(data) ? data : (data.courses || []);
+                this.gpaInfo = data.gpa || {};
                 this.lastSyncedAt = Array.isArray(data) ? '' : (data.last_synced_at || '');
             } catch (e) {
                 console.error('載入課程資料失敗', e);
@@ -179,8 +185,10 @@ function coursesApp() {
             this.refreshMessage = '';
 
             try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
                 const formData = new FormData();
                 formData.append('password', this.refreshPassword);
+                formData.append('csrf_token', csrfToken);
 
                 const response = await fetch('/courses/refresh', {
                     method: 'POST',
@@ -193,6 +201,7 @@ function coursesApp() {
                 }
 
                 this.courses = data.courses || [];
+                this.gpaInfo = data.gpa || {};
                 this.lastSyncedAt = data.last_synced_at || '';
                 this.refreshPassword = '';
                 this.refreshMessage = data.message || '已重新同步';
@@ -217,8 +226,7 @@ function coursesApp() {
                     if (this.filterTerm && term !== this.filterTerm) return false;
 
                     if (this.filterStatus) {
-                        const status = this.getCourseStatus(c);
-                        if (status !== this.filterStatus) return false;
+                        if (c._status !== this.filterStatus) return false;
                     }
 
                     return true;
@@ -233,19 +241,19 @@ function coursesApp() {
 
         get totalCredits() {
             return this.filteredCourses
-                .filter(c => this.getCourseStatus(c) !== 'failed')
+                .filter(c => c._status !== 'failed')
                 .reduce((sum, c) => sum + parseFloat(c.學分數 || 0), 0);
         },
 
         get passedCredits() {
             return this.courses
-                .filter(c => this.isPassed(c.修課成績))
+                .filter(c => c._status === 'passed')
                 .reduce((sum, c) => sum + parseFloat(c.學分數 || 0), 0);
         },
 
         get inProgressCredits() {
             return this.courses
-                .filter(c => this.isInProgressScore(c.修課成績))
+                .filter(c => c._status === 'in_progress')
                 .reduce((sum, c) => sum + parseFloat(c.學分數 || 0), 0);
         },
 
@@ -256,29 +264,6 @@ function coursesApp() {
         get availableYears() {
             const years = new Set(this.courses.map(c => (c.學年學期 || '').slice(0, 3)));
             return [...years].filter(y => y).sort().reverse();
-        },
-
-        // 判斷是否通過
-        isPassed(score) {
-            if (!score) return false;
-            score = score.trim().toUpperCase();
-            if (['S', 'I'].includes(score)) return false;
-            if (['P', '通過', '及格'].includes(score)) return true;
-            const num = parseFloat(score);
-            return !isNaN(num) && num >= 60;
-        },
-
-        isInProgressScore(score) {
-            if (!score) return true;
-            return score.trim().toUpperCase() === 'I';
-        },
-
-        // 取得課程狀態
-        getCourseStatus(course) {
-            const score = course.修課成績;
-            if (this.isInProgressScore(score)) return 'in_progress';
-            if (this.isPassed(score)) return 'passed';
-            return 'failed';
         },
 
         // 格式化學期顯示
@@ -298,8 +283,7 @@ function coursesApp() {
 
         // 取得狀態樣式
         getStatusClass(course) {
-            const status = this.getCourseStatus(course);
-            switch (status) {
+            switch (course._status) {
                 case 'passed':
                     return 'bg-green-100 text-green-800';
                 case 'failed':
@@ -313,8 +297,7 @@ function coursesApp() {
 
         // 取得狀態文字
         getStatusText(course) {
-            const status = this.getCourseStatus(course);
-            switch (status) {
+            switch (course._status) {
                 case 'passed': return '已通過';
                 case 'failed': return '未通過';
                 case 'in_progress': return '修習中';
