@@ -363,8 +363,11 @@
                                  x-text="index + 1"></div>
                             <div class="flex-1 min-w-0 space-y-1">
                                 <div class="font-medium text-sm text-gray-900 truncate" x-text="course.CCOURSENAME"></div>
-                                <div class="text-xs text-gray-600 truncate" x-text="course.NAME || '教師未提供'"></div>
-                                <div class="text-xs text-gray-500 truncate" x-text="course.DEPARTMENTNAME_C || course.DEPARTMENTNAME || '開課單位未提供'"></div>
+                                <div class="text-xs text-gray-600 truncate">
+                                    <span x-text="course.NAME || '教師未提供'"></span>
+                                    <span class="mx-1 text-gray-400">|</span>
+                                    <span x-text="course.DEPARTMENTNAME_C || course.DEPARTMENTNAME || '開課單位未提供'"></span>
+                                </div>
                                 <div class="text-xs text-gray-500 truncate" x-text="course.C_PTIME"></div>
                             </div>
                             <button @click="removeFromCart(course)" aria-label="移除預選課程" class="rounded p-1.5 text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 cursor-pointer">
