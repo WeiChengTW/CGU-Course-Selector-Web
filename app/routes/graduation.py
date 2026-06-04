@@ -66,13 +66,13 @@ async def start_analysis(
     grad_pdf_path = session_dir / "graduation_pdf.pdf"
     grad_pdf_path.write_bytes(pdf_bytes)
 
+    is_honor = honor_program.lower() in ("true", "on", "1", "yes")
+
     if is_honor and honor_pdf and honor_pdf.filename:
         honor_bytes = await honor_pdf.read()
         if honor_bytes:
             honor_pdf_path = session_dir / "graduation_honor_pdf.pdf"
             honor_pdf_path.write_bytes(honor_bytes)
-
-    is_honor = honor_program.lower() in ("true", "on", "1", "yes")
     effective_api_key = api_key.strip() or None
     svc.write_status("analyzing", "任務已排入，準備開始分析...")
 

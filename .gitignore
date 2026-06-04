@@ -13,7 +13,7 @@ venv/
 env/
 
 # Data and personal files
-data/
+data/sessions/
 
 # Playwright browsers
 .playwright/
@@ -34,4 +34,3 @@ tests/
 docs/
 
 .env
-
