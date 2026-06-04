@@ -3,42 +3,56 @@
 {% block title %}選課建議 - 長庚大學選課系統{% endblock %}
 
 {% block content %}
-<div x-data="recommendApp()">
-    <h1 class="text-3xl font-bold text-[#333333] mb-6">💡 選課建議</h1>
+<div x-data="recommendApp()" class="space-y-6">
+    <div class="flex items-center gap-3">
+        <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-[#E39800]/15 text-[#C48400] ring-1 ring-[#E39800]/20">
+            <svg class="h-7 w-7" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2a7 7 0 0 0-4 12.74V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.26A7 7 0 0 0 12 2z" />
+                <path d="M10 22h4" />
+            </svg>
+        </div>
+        <div>
+            <h1 class="text-3xl font-bold text-[#333333]">選課建議</h1>
+            <p class="mt-1 text-sm text-gray-600">根據畢業規則與已修課程產生下學期優先建議。</p>
+        </div>
+    </div>
 
     <!-- 說明區塊 -->
-    <div class="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
-        <p class="text-orange-700 text-sm">
+    <div class="flex items-start gap-3 rounded-xl border border-[#E39800]/30 bg-orange-50 p-4">
+        <svg class="mt-0.5 h-5 w-5 shrink-0 text-[#C48400]" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <path d="M12 9v4" />
+            <path d="M12 17h.01" />
+        </svg>
+        <p class="text-[#8A5A00] text-sm">
             以下建議根據您的畢業規則與已修課程分析產生，建議優先修習高優先級的缺修課程。
         </p>
     </div>
 
     <!-- 建議清單 -->
-    <div class="bg-white rounded-lg shadow overflow-hidden mb-6 border border-gray-200">
-        <div class="px-4 py-3 bg-gray-50 border-b flex justify-between items-center">
+    <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div class="flex items-center justify-between border-b bg-[#E8E2D6] px-4 py-3">
             <h3 class="font-semibold text-[#333333]">建議修習課程</h3>
             <button @click="addToAllCart()"
                     x-show="recommendations.length > 0"
-                    class="text-sm text-[#E39800] hover:text-[#C48400]">
+                    class="rounded-lg px-3 py-1.5 text-sm font-medium text-[#C48400] transition-colors hover:bg-orange-50 hover:text-[#333333] cursor-pointer">
                 全部加入待選清單
             </button>
         </div>
 
         <div class="divide-y divide-gray-200">
             <template x-for="(rec, index) in recommendations" :key="index">
-                <div class="p-4 hover:bg-orange-50 flex items-center justify-between">
+                <div class="flex items-center justify-between gap-4 p-4 transition-colors hover:bg-orange-50">
                     <div class="flex-1">
-                        <div class="flex items-center gap-2">
-                            <span class="text-lg font-medium text-gray-900" x-text="rec"></span>
-                        </div>
+                        <span class="text-lg font-medium text-gray-900" x-text="rec"></span>
                     </div>
                     <div class="flex items-center gap-2">
                         <a :href="`/catalog?keyword=${encodeURIComponent(rec)}`"
-                           class="text-sm text-[#E39800] hover:text-[#C48400] px-3 py-1 border border-[#E39800] rounded hover:bg-orange-50">
+                           class="rounded-lg border border-[#E39800] px-3 py-1.5 text-sm font-medium text-[#C48400] transition-colors hover:bg-orange-50 hover:text-[#333333]">
                             查詢開課
                         </a>
                         <button @click="addToCart(rec)"
-                                class="text-sm bg-[#E39800] text-white px-3 py-1 rounded hover:bg-[#C48400]">
+                                class="rounded-lg bg-[#E39800] px-3 py-1.5 text-sm font-medium text-[#333333] transition-colors hover:bg-[#C48400] cursor-pointer">
                             加入待選
                         </button>
                     </div>
@@ -46,29 +60,38 @@
             </template>
         </div>
 
-        <div x-show="recommendations.length === 0" class="text-center py-8 text-gray-400">
+        <div x-show="recommendations.length === 0" class="text-center py-10 text-gray-500">
             目前無選課建議，請先完成畢業規則分析。
         </div>
     </div>
 
     <!-- 待選清單 -->
-    <div x-show="cart.length > 0" class="bg-white rounded-lg shadow overflow-hidden border border-gray-200">
-        <div class="px-4 py-3 bg-green-50 border-b flex justify-between items-center">
-            <h3 class="font-semibold text-green-800">📝 我的待選清單</h3>
-            <button @click="clearCart()" class="text-sm text-red-600 hover:text-red-800">
+    <div x-show="cart.length > 0" class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div class="flex items-center justify-between border-b bg-[#E8E2D6] px-4 py-3">
+            <h3 class="flex items-center gap-2 font-semibold text-[#333333]">
+                <svg class="h-5 w-5 text-[#C48400]" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 11l3 3L22 4" />
+                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                </svg>
+                我的待選清單
+            </h3>
+            <button @click="clearCart()" class="rounded-lg px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 hover:text-red-800 cursor-pointer">
                 清空
             </button>
         </div>
 
         <ul class="divide-y divide-gray-200">
             <template x-for="(item, index) in cart" :key="index">
-                <li class="px-4 py-3 flex items-center justify-between hover:bg-orange-50">
+                <li class="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-orange-50">
                     <span class="text-gray-900" x-text="courseName(item)"></span>
                     <div class="flex items-center gap-2">
                         <a :href="`/catalog?keyword=${encodeURIComponent(courseName(item))}`"
-                           class="text-sm text-[#E39800] hover:underline">查詢</a>
-                        <button @click="removeFromCart(index)" class="text-red-500 hover:text-red-700">
-                            ✕
+                           class="rounded px-2 py-1 text-sm text-[#C48400] hover:bg-orange-50 hover:text-[#333333]">查詢</a>
+                        <button @click="removeFromCart(index)" aria-label="移除待選課程" class="rounded p-1.5 text-red-500 transition-colors hover:bg-red-50 hover:text-red-700 cursor-pointer">
+                            <svg class="h-4 w-4" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M18 6 6 18" />
+                                <path d="m6 6 12 12" />
+                            </svg>
                         </button>
                     </div>
                 </li>

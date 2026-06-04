@@ -3,43 +3,76 @@
 {% block title %}長庚大學選課系統{% endblock %}
 
 {% block content %}
-<div class="text-center py-12">
-    <h1 class="text-4xl font-bold text-[#333333] mb-4">🎓 長庚大學選課視覺化系統</h1>
-    <p class="text-gray-600 text-lg mb-8">畢業學分計算與選課建議</p>
+<div class="py-12">
+    <div class="mx-auto max-w-3xl text-center mb-10">
+        <div class="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#E39800]/15 text-[#C48400] shadow-sm ring-1 ring-[#E39800]/20">
+            <svg class="h-9 w-9" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+                <path d="M6 12v5c3 3 9 3 12 0v-5" />
+            </svg>
+        </div>
+        <h1 class="text-4xl font-bold text-[#333333] mb-4">長庚大學選課視覺化系統</h1>
+        <p class="text-gray-600 text-lg">畢業學分計算、課程查詢與選課建議整合平台</p>
+    </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
         <!-- 已修課程卡片 -->
-        <a href="/courses" class="block bg-white rounded-xl shadow-md hover:shadow-lg transition p-6 border-l-4 border-[#E39800] hover:border-[#C48400]">
-            <div class="text-3xl mb-3">📚</div>
+        <a href="/courses" class="group block rounded-2xl border border-[#D1C7AC] bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#E39800] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#E39800] focus:ring-offset-2">
+            <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[#E39800]/15 text-[#C48400] transition-colors group-hover:bg-[#E39800]/25">
+                <svg class="h-7 w-7" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                    <path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z" />
+                </svg>
+            </div>
             <h2 class="text-xl font-semibold text-[#333333]">已修課程</h2>
-            <p class="text-gray-500 text-sm mt-2">查看已修課程清單與學分統計</p>
+            <p class="text-gray-600 text-sm mt-2">查看已修課程清單與學分統計</p>
         </a>
 
         <!-- 開課查詢卡片 -->
-        <a href="/catalog" class="block bg-white rounded-xl shadow-md hover:shadow-lg transition p-6 border-l-4 border-green-500 hover:border-green-600">
-            <div class="text-3xl mb-3">🔍</div>
+        <a href="/catalog" class="group block rounded-2xl border border-[#D1C7AC] bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#E39800] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#E39800] focus:ring-offset-2">
+            <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[#D1C7AC]/35 text-[#333333] transition-colors group-hover:bg-[#D1C7AC]/50">
+                <svg class="h-7 w-7" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.3-4.3" />
+                </svg>
+            </div>
             <h2 class="text-xl font-semibold text-[#333333]">開課查詢</h2>
-            <p class="text-gray-500 text-sm mt-2">查詢課程時間、教師與學分資訊</p>
+            <p class="text-gray-600 text-sm mt-2">查詢課程時間、教師與學分資訊</p>
         </a>
 
         <!-- 畢業進度卡片 -->
-        <a href="/catalog" class="block bg-white rounded-xl shadow-md hover:shadow-lg transition p-6 border-l-4 border-purple-500 hover:border-purple-600">
-            <div class="text-3xl mb-3">📊</div>
+        <a href="/graduation" class="group block rounded-2xl border border-[#D1C7AC] bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#E39800] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#E39800] focus:ring-offset-2">
+            <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[#E39800]/15 text-[#C48400] transition-colors group-hover:bg-[#E39800]/25">
+                <svg class="h-7 w-7" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 3v18h18" />
+                    <path d="m19 9-5 5-4-4-3 3" />
+                </svg>
+            </div>
             <h2 class="text-xl font-semibold text-[#333333]">畢業進度</h2>
-            <p class="text-gray-500 text-sm mt-2">追蹤畢業學分完成狀況</p>
+            <p class="text-gray-600 text-sm mt-2">追蹤畢業學分完成狀況</p>
         </a>
 
         <!-- 選課建議卡片 -->
-        <a href="/catalog" class="block bg-white rounded-xl shadow-md hover:shadow-lg transition p-6 border-l-4 border-[#C48400] hover:border-[#333333]">
-            <div class="text-3xl mb-3">💡</div>
+        <a href="/recommend" class="group block rounded-2xl border border-[#D1C7AC] bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#E39800] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#E39800] focus:ring-offset-2">
+            <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[#D1C7AC]/35 text-[#333333] transition-colors group-hover:bg-[#D1C7AC]/50">
+                <svg class="h-7 w-7" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2a7 7 0 0 0-4 12.74V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.26A7 7 0 0 0 12 2z" />
+                    <path d="M10 22h4" />
+                </svg>
+            </div>
             <h2 class="text-xl font-semibold text-[#333333]">選課建議</h2>
-            <p class="text-gray-500 text-sm mt-2">根據畢業規則推薦下學期課程</p>
+            <p class="text-gray-600 text-sm mt-2">根據畢業規則推薦下學期課程</p>
         </a>
     </div>
 
-    <div class="mt-12 bg-orange-50 border border-orange-200 rounded-lg p-4 max-w-2xl mx-auto">
-        <p class="text-orange-700 text-sm">
-            ⚠️ 本系統資料僅供參考，正式畢業資格以系辦與教務處認定為準。
+    <div class="mt-12 flex max-w-2xl items-start gap-3 rounded-xl border border-[#E39800]/30 bg-orange-50 p-4 mx-auto">
+        <svg class="mt-0.5 h-5 w-5 shrink-0 text-[#C48400]" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <path d="M12 9v4" />
+            <path d="M12 17h.01" />
+        </svg>
+        <p class="text-[#8A5A00] text-sm text-left">
+            本系統資料僅供參考，正式畢業資格以系辦與教務處認定為準。
         </p>
     </div>
 </div>

@@ -5,26 +5,32 @@
 {% block content %}
 <div x-data="courseSelectorApp()" class="min-h-screen">
     <!-- 頂部狀態列 -->
-    <div class="bg-gradient-to-r from-[#E39800] to-[#C48400] text-white px-6 py-4 rounded-xl shadow-lg mb-6">
+    <div class="bg-gradient-to-r from-[#E39800] to-[#C48400] text-[#333333] px-6 py-4 rounded-xl shadow-lg mb-6">
         <div class="flex flex-wrap items-center justify-between gap-4">
             <div>
-                <h1 class="text-2xl font-bold">📚 課程預選系統</h1>
-                <p class="text-[#F5B333] text-sm mt-1">長庚大學 115 學年度選課系統</p>
+                <h1 class="flex items-center gap-2 text-2xl font-bold text-[#333333]">
+                    <svg class="h-7 w-7" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                        <path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z" />
+                    </svg>
+                    課程預選系統
+                </h1>
+                <p class="text-[#333333] text-sm mt-1">長庚大學 115 學年度選課系統</p>
             </div>
             <div class="flex items-center gap-6">
                 <div class="text-center">
                     <div class="text-3xl font-bold" x-text="takenInfo.passed_credits || 0">0</div>
-                    <div class="text-xs text-[#F5B333]">已修學分</div>
+                    <div class="text-xs text-[#333333]">已修學分</div>
                 </div>
                 <div class="w-px h-10 bg-white/30"></div>
                 <div class="text-center">
                     <div class="text-3xl font-bold" x-text="cart.length">0</div>
-                    <div class="text-xs text-[#F5B333]">預選課程</div>
+                    <div class="text-xs text-[#333333]">預選課程</div>
                 </div>
                 <div class="w-px h-10 bg-white/30"></div>
                 <div class="text-center">
                     <div class="text-3xl font-bold text-yellow-300" x-text="totalCredits">0</div>
-                    <div class="text-xs text-[#F5B333]">預選學分</div>
+                    <div class="text-xs text-[#333333]">預選學分</div>
                 </div>
             </div>
         </div>
@@ -36,10 +42,13 @@
         <div class="bg-white rounded-xl shadow-lg border-2 border-[#E39800] overflow-hidden">
             <div class="bg-gradient-to-r from-[#E39800] to-[#C48400] px-6 py-4 flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <span class="text-2xl">📆</span>
-                    <span class="text-xl font-bold text-white">週課表</span>
+                    <svg class="h-6 w-6 text-[#333333]" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M8 2v4M16 2v4M3 10h18" />
+                        <rect x="3" y="4" width="18" height="18" rx="2" />
+                    </svg>
+                    <span class="text-xl font-bold text-[#333333]">週課表</span>
                 </div>
-                <div class="text-sm text-[#F5B333]">點擊課程可移除</div>
+                <div class="text-sm text-[#333333]">點擊課程可移除</div>
             </div>
             <div class="p-4 overflow-x-auto bg-[#F9F9F9]">
                 <table class="w-full border-collapse text-sm min-w-[600px]">
@@ -68,7 +77,10 @@
             <!-- 搜尋條件 -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <div class="bg-[#E8E2D6] px-4 py-3 border-b flex items-center gap-2">
-                    <span class="text-lg">🔍</span>
+                    <svg class="h-5 w-5 text-[#C48400]" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="m21 21-4.3-4.3" />
+                    </svg>
                     <span class="font-semibold text-[#333333]">搜尋條件</span>
                 </div>
                 <div class="p-4 space-y-3">
@@ -189,8 +201,14 @@
 
                     <button @click="search()"
                             :disabled="loading"
-                            class="w-full bg-gradient-to-r from-[#E39800] to-[#C48400] text-white rounded-lg px-4 py-2.5 font-medium hover:from-[#C48400] hover:to-[#333333] disabled:from-gray-400 disabled:to-gray-400 transition-all shadow-sm">
-                        <span x-show="!loading">🔍 搜尋課程</span>
+                            class="w-full bg-gradient-to-r from-[#E39800] to-[#C48400] text-[#333333] rounded-lg px-4 py-2.5 font-medium hover:from-[#C48400] hover:to-[#333333] disabled:from-gray-300 disabled:to-gray-300 transition-all shadow-sm">
+                        <span x-show="!loading" class="flex items-center justify-center gap-2">
+                            <svg class="h-4 w-4" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8" />
+                                <path d="m21 21-4.3-4.3" />
+                            </svg>
+                            搜尋課程
+                        </span>
                         <span x-show="loading" class="flex items-center justify-center gap-2">
                             <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
@@ -206,7 +224,10 @@
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <div class="bg-[#E8E2D6] px-4 py-3 border-b flex items-center justify-between">
                     <div class="flex items-center gap-2">
-                        <span class="text-lg">📋</span>
+                        <svg class="h-5 w-5 text-[#C48400]" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M8 6h13M8 12h13M8 18h13" />
+                            <path d="M3 6h.01M3 12h.01M3 18h.01" />
+                        </svg>
                         <span class="font-semibold text-[#333333]">搜尋結果</span>
                     </div>
                     <span class="text-sm text-gray-500 bg-gray-200 px-2 py-0.5 rounded-full" x-text="results.length + ' 筆'"></span>
@@ -227,13 +248,13 @@
                                     <div class="flex items-center gap-2 flex-wrap">
                                         <span class="font-medium text-gray-900 truncate" x-text="course.CCOURSENAME"></span>
                                         <template x-if="course.course_status === 'passed'">
-                                            <span class="shrink-0 text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium">✓ 已通過</span>
+                                            <span class="shrink-0 text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium">已通過</span>
                                         </template>
                                         <template x-if="course.course_status === 'failed'">
-                                            <span class="shrink-0 text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-medium">✗ 未通過</span>
+                                            <span class="shrink-0 text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-medium">未通過</span>
                                         </template>
                                         <template x-if="course.course_status === 'in_progress'">
-                                            <span class="shrink-0 text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full font-medium">⏳ 修習中</span>
+                                            <span class="shrink-0 text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full font-medium">修習中</span>
                                         </template>
                                     </div>
                                     <div class="text-xs text-gray-500 mt-1 flex flex-wrap gap-x-2">
@@ -253,8 +274,11 @@
                             </div>
                         </div>
                     </template>
-                    <div x-show="results.length === 0 && searched" class="text-center py-12 text-gray-400">
-                        <div class="text-4xl mb-2">🔍</div>
+                    <div x-show="results.length === 0 && searched" class="text-center py-12 text-gray-500">
+                        <svg class="mx-auto mb-3 h-10 w-10 text-[#C48400]" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8" />
+                            <path d="m21 21-4.3-4.3" />
+                        </svg>
                         <p>輸入條件後點擊搜尋</p>
                     </div>
                 </div>
@@ -265,7 +289,13 @@
         <div class="lg:col-span-1 space-y-4">
             <div class="bg-gradient-to-br from-[#E8E2D6] to-[#F9F9F9] rounded-xl p-5 border border-[#D1C7AC] shadow-sm">
                 <h3 class="font-semibold text-[#333333] mb-4 flex items-center gap-2 text-lg">
-                    <span>📊</span> 學分統計
+                    <svg class="h-5 w-5 text-[#C48400]" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 3v18h18" />
+                        <path d="M18 17V9" />
+                        <path d="M13 17V5" />
+                        <path d="M8 17v-3" />
+                    </svg>
+                    學分統計
                 </h3>
                 <div class="grid grid-cols-3 gap-3 text-center">
                     <div class="bg-white rounded-lg p-3 shadow-sm">
@@ -299,7 +329,10 @@
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <div class="bg-[#E8E2D6] px-4 py-3 border-b flex items-center justify-between">
                     <div class="flex items-center gap-2">
-                        <span class="text-lg">⭐</span>
+                        <svg class="h-5 w-5 text-[#C48400]" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 11l3 3L22 4" />
+                            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                        </svg>
                         <span class="font-semibold text-[#333333]">預選清單</span>
                     </div>
                     <div class="flex items-center gap-2">
@@ -323,20 +356,30 @@
                             <div class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
                                  :class="{
                                      'bg-red-500 text-white': index === 0,
-                                     'bg-[#E39800] text-white': index === 1,
-                                     'bg-yellow-500 text-white': index === 2,
+                                     'bg-[#E39800] text-[#333333]': index === 1,
+                                     'bg-yellow-500 text-[#333333]': index === 2,
                                      'bg-[#D1C7AC] text-gray-600': index > 2
                                  }"
                                  x-text="index + 1"></div>
-                            <div class="flex-1 min-w-0">
+                            <div class="flex-1 min-w-0 space-y-1">
                                 <div class="font-medium text-sm text-gray-900 truncate" x-text="course.CCOURSENAME"></div>
-                                <div class="text-xs text-gray-500" x-text="course.C_PTIME"></div>
+                                <div class="text-xs text-gray-600 truncate" x-text="course.NAME || '教師未提供'"></div>
+                                <div class="text-xs text-gray-500 truncate" x-text="course.DEPARTMENTNAME_C || course.DEPARTMENTNAME || '開課單位未提供'"></div>
+                                <div class="text-xs text-gray-500 truncate" x-text="course.C_PTIME"></div>
                             </div>
-                            <button @click="removeFromCart(course)" class="text-gray-400 hover:text-red-600 text-lg leading-none">×</button>
+                            <button @click="removeFromCart(course)" aria-label="移除預選課程" class="rounded p-1.5 text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 cursor-pointer">
+                                <svg class="h-4 w-4" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M18 6 6 18" />
+                                    <path d="m6 6 12 12" />
+                                </svg>
+                            </button>
                         </div>
                     </template>
-                    <div x-show="cart.length === 0" class="text-center py-12 text-gray-400">
-                        <div class="text-4xl mb-2">📝</div>
+                    <div x-show="cart.length === 0" class="text-center py-12 text-gray-500">
+                        <svg class="mx-auto mb-3 h-10 w-10 text-[#C48400]" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 11l3 3L22 4" />
+                            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                        </svg>
                         <p>從搜尋結果拖曳或點擊「加入」</p>
                     </div>
                 </div>
@@ -372,13 +415,18 @@
         <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[85vh] overflow-hidden">
             <template x-if="selectedCourse">
                 <div>
-                    <div class="bg-gradient-to-r from-[#E39800] to-[#C48400] text-white px-6 py-4">
+                    <div class="bg-gradient-to-r from-[#E39800] to-[#C48400] text-[#333333] px-6 py-4">
                         <div class="flex justify-between items-start">
                             <div>
                                 <h2 class="text-xl font-bold" x-text="selectedCourse.CCOURSENAME"></h2>
-                                <div class="text-[#F5B333] text-sm mt-1" x-text="selectedCourse.DEPARTMENTNAME_C"></div>
+                                <div class="text-[#333333] text-sm mt-1" x-text="selectedCourse.DEPARTMENTNAME_C"></div>
                             </div>
-                            <button @click="selectedCourse = null" class="text-white/70 hover:text-white text-2xl leading-none">×</button>
+                            <button @click="selectedCourse = null" aria-label="關閉課程詳情" class="rounded p-1.5 text-[#333333]/70 transition-colors hover:bg-black/10 hover:text-[#333333] cursor-pointer">
+                                <svg class="h-5 w-5" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M18 6 6 18" />
+                                    <path d="m6 6 12 12" />
+                                </svg>
+                            </button>
                         </div>
                     </div>
                     <div class="p-6 overflow-y-auto max-h-[50vh]">
@@ -404,7 +452,7 @@
                     <div class="px-6 py-4 bg-[#E8E2D6] border-t border-[#D1C7AC] flex gap-3">
                         <template x-if="selectedCourse.course_status !== 'passed'">
                             <button @click="addToCart(selectedCourse); selectedCourse = null"
-                                    class="flex-1 bg-gradient-to-r from-[#E39800] to-[#C48400] text-white rounded-lg px-4 py-2.5 font-medium hover:from-[#C48400] hover:to-[#333333]">
+                                    class="flex-1 bg-gradient-to-r from-[#E39800] to-[#C48400] text-[#333333] rounded-lg px-4 py-2.5 font-medium hover:from-[#C48400] hover:to-[#333333]">
                                 加入預選清單
                             </button>
                         </template>
@@ -531,7 +579,7 @@ function courseSelectorApp() {
                     html += `<td class="border border-gray-200 p-1 min-w-[80px] h-12 align-top ${hasCourse ? 'bg-orange-50' : 'hover:bg-gray-50'}"
                                 @dragover.prevent @drop="dropOnSchedule($event, '${day}', ${period.num})">`;
                     for (const c of courses) {
-                        html += `<div class="bg-[#E39800] text-white text-xs px-2 py-1 rounded cursor-pointer truncate hover:bg-[#C48400] mb-1 shadow-sm"
+                        html += `<div class="bg-[#E39800] text-[#333333] text-xs px-2 py-1 rounded cursor-pointer truncate hover:bg-[#C48400] mb-1 shadow-sm"
                                      @click="removeFromCart(getCartCourse('${c.SECTIONID}'))">${c.CCOURSENAME}</div>`;
                     }
                     html += '</td>';
