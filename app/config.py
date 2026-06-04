@@ -2,8 +2,11 @@
 
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 # 專案根目錄
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / ".env")
 
 # 資料目錄
 DATA_DIR = BASE_DIR / "data"

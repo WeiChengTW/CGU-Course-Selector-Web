@@ -1,4 +1,6 @@
 {% set r = report %}
+{% set recognized_credits = r.recognized_credits | float %}
+{% set required_credits = r.required_credits | float %}
 <div x-data="graduationApp()" x-init="init()" class="space-y-6">
 
     <!-- 頂部狀態 + 重新分析 -->
@@ -26,13 +28,13 @@
                 <p class="text-gray-500 mt-1 text-sm">{{ r.one_sentence_summary }}</p>
             </div>
             <div class="text-right">
-                <div class="text-4xl font-bold {% if r.recognized_credits >= r.required_credits %}text-green-600{% else %}text-[#E39800]{% endif %}">
+                <div class="text-4xl font-bold {% if recognized_credits >= required_credits %}text-green-600{% else %}text-[#E39800]{% endif %}">
                     {{ r.recognized_credits }} / {{ r.required_credits }}
                 </div>
                 <div class="text-sm text-gray-500">已認列 / 需要</div>
             </div>
         </div>
-        {% set pct = [(r.recognized_credits / r.required_credits * 100) | round | int, 100] | min %}
+        {% set pct = [((recognized_credits / required_credits * 100) if required_credits > 0 else 0) | round | int, 100] | min %}
         <div class="overflow-hidden h-3 rounded bg-orange-100">
             <div class="h-3 rounded bg-gradient-to-r from-[#E39800] to-[#C48400] transition-all"
                  style="width: {{ pct }}%"></div>
@@ -109,9 +111,22 @@
     {% if r.next_semester_recommendations %}
     <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h3 class="font-semibold text-blue-800 mb-2">下學期選課建議</h3>
-        <ul class="space-y-1">
+        <ul class="space-y-2">
             {% for rec in r.next_semester_recommendations %}
-            <li class="text-sm text-blue-700">• {% if rec is mapping %}{{ rec.get('action', rec) }}{% else %}{{ rec }}{% endif %}</li>
+            <li class="text-sm text-blue-700 flex items-start gap-2">
+                {% if rec is mapping %}
+                    {% if rec.priority == "high" %}
+                    <span class="shrink-0 mt-0.5 px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">高</span>
+                    {% elif rec.priority == "medium" %}
+                    <span class="shrink-0 mt-0.5 px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-700">中</span>
+                    {% else %}
+                    <span class="shrink-0 mt-0.5 px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">低</span>
+                    {% endif %}
+                    <span><span class="font-medium">{{ rec.get('action', '') }}</span>{% if rec.get('reason') %} — {{ rec.reason }}{% endif %}</span>
+                {% else %}
+                    <span>• {{ rec }}</span>
+                {% endif %}
+            </li>
             {% endfor %}
         </ul>
     </div>

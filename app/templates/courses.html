@@ -4,7 +4,37 @@
 
 {% block content %}
 <div x-data="coursesApp()">
-    <h1 class="text-3xl font-bold text-[#333333] mb-6">📚 已修課程</h1>
+    <div class="flex flex-col gap-4 mb-6 md:flex-row md:items-start md:justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-[#333333]">📚 已修課程</h1>
+            <p class="text-sm text-gray-500 mt-2" x-show="lastSyncedAt">
+                最後同步：<span x-text="formatDateTime(lastSyncedAt)"></span>
+            </p>
+        </div>
+        <div class="bg-white rounded-lg shadow border border-gray-200 p-4 w-full md:w-80">
+            <button type="button"
+                    @click="showRefreshForm = !showRefreshForm"
+                    class="w-full bg-[#E39800] hover:bg-[#C48400] text-white font-semibold px-4 py-2 rounded-lg transition disabled:opacity-60"
+                    :disabled="refreshing">
+                <span x-show="!refreshing">刷新重抓 MOOCS</span>
+                <span x-show="refreshing">同步中，請稍候...</span>
+            </button>
+            <form x-show="showRefreshForm" x-cloak @submit.prevent="refreshCourses()" class="mt-3 space-y-2">
+                <input type="password"
+                       x-model="refreshPassword"
+                       autocomplete="current-password"
+                       placeholder="輸入 MOOCS 密碼"
+                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E39800] focus:border-transparent">
+                <button type="submit"
+                        :disabled="refreshing || !refreshPassword"
+                        class="w-full bg-gray-700 hover:bg-gray-800 disabled:opacity-50 text-white font-medium px-4 py-2 rounded-lg transition">
+                    確認刷新
+                </button>
+                <p x-show="refreshError" x-text="refreshError" class="text-sm text-red-600"></p>
+                <p x-show="refreshMessage" x-text="refreshMessage" class="text-sm text-green-600"></p>
+            </form>
+        </div>
+    </div>
 
     <!-- 學分統計卡片 -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
@@ -125,13 +155,52 @@ function coursesApp() {
         filterYear: '',
         filterTerm: '',
         filterStatus: '',
+        showRefreshForm: false,
+        refreshing: false,
+        refreshPassword: '',
+        refreshError: '',
+        refreshMessage: '',
+        lastSyncedAt: '',
 
         async init() {
             try {
                 const response = await fetch('/courses/data');
-                this.courses = await response.json();
+                const data = await response.json();
+                this.courses = Array.isArray(data) ? data : (data.courses || []);
+                this.lastSyncedAt = Array.isArray(data) ? '' : (data.last_synced_at || '');
             } catch (e) {
                 console.error('載入課程資料失敗', e);
+            }
+        },
+
+        async refreshCourses() {
+            this.refreshing = true;
+            this.refreshError = '';
+            this.refreshMessage = '';
+
+            try {
+                const formData = new FormData();
+                formData.append('password', this.refreshPassword);
+
+                const response = await fetch('/courses/refresh', {
+                    method: 'POST',
+                    body: formData,
+                });
+                const data = await response.json();
+
+                if (!response.ok || data.error) {
+                    throw new Error(data.error || '同步失敗');
+                }
+
+                this.courses = data.courses || [];
+                this.lastSyncedAt = data.last_synced_at || '';
+                this.refreshPassword = '';
+                this.refreshMessage = data.message || '已重新同步';
+                this.showRefreshForm = false;
+            } catch (e) {
+                this.refreshError = e.message || '同步失敗';
+            } finally {
+                this.refreshing = false;
             }
         },
 
@@ -154,7 +223,9 @@ function coursesApp() {
         },
 
         get totalCredits() {
-            return this.filteredCourses.reduce((sum, c) => sum + parseFloat(c.學分數 || 0), 0);
+            return this.filteredCourses
+                .filter(c => this.getCourseStatus(c) !== 'failed')
+                .reduce((sum, c) => sum + parseFloat(c.學分數 || 0), 0);
         },
 
         get passedCredits() {
@@ -202,6 +273,13 @@ function coursesApp() {
             const year = sem.slice(0, 3);
             const term = sem.slice(3);
             return `${year}學年第${term}學期`;
+        },
+
+        formatDateTime(value) {
+            if (!value) return '';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return value;
+            return date.toLocaleString('zh-TW', { hour12: false });
         },
 
         // 取得狀態樣式
