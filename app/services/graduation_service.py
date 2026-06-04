@@ -194,7 +194,6 @@ def run_graduation_analysis(
         merged_csv = _merge_course_csv(session_dir)
 
         # 5. Generate course summary
-        from app.lib.graduation.report import summarize_courses
         summary = summarize_courses(merged_csv)
 
         # 6. Call LLM

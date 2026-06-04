@@ -131,6 +131,7 @@ _MULTI_ELECTIVE_DOMAINS: dict[str, list[str]] = {
         "科技倫理", "管理經濟學", "財務管理與分析", "個人理財與投資", "法律與生活",
         "網路社會學", "兩性關係", "親職教育", "自我探索", "人際溝通", "生涯發展與規劃",
         "全球化思維的領導與決策", "媒體素養", "企業組織與工作倫理", "智慧財產權",
+        "瘟癘瘴蠱",
     ],
     "自然科學": [
         "營養與保健", "生命科學導論", "生物技術概論", "自然科技與永續發展應用",
@@ -352,6 +353,26 @@ def _build_precomputed_context(
     multi_total = sum(c for courses in multi_domain_map.values() for _, c in courses)
     multi_domains_count = len(multi_domain_map)
 
+    # Names already classified as core-only (must not be double-counted as multi-elective)
+    core_matched_names: set[str] = {
+        name for courses in core_domain_map.values() for name, _ in courses
+        if "榮譽學程抵免" not in name
+    }
+    multi_matched_names: set[str] = {
+        name for courses in multi_domain_map.values() for name, _ in courses
+        if "榮譽學程抵免" not in name
+    }
+    # 校定選修 courses that matched neither core nor multi domain lists.
+    # Their domain is unknown but they are still 通識 elective credits.
+    unmatched_multi = [
+        r for r in multi_elective_passed
+        if r.get("課程名稱", "").strip() not in core_matched_names
+        and r.get("課程名稱", "").strip() not in multi_matched_names
+    ]
+    unmatched_credits = sum(float(r.get("學分", 0) or 0) for r in unmatched_multi)
+    # Correct total: domain-matched multi credits + unmatched (non-core) credits
+    multi_total_all = multi_total + unmatched_credits
+
     lines = ["【預計算分析（請直接採用，不需重新推斷）】"]
     lines.append(f"\n■ 學生身份：{'榮譽學程學生（使用者勾選）' if is_honors else '一般學生'}")
     lines.append(f"\n■ 英文領域（通識）：")
@@ -397,11 +418,15 @@ def _build_precomputed_context(
     for domain, courses in multi_domain_map.items():
         total = sum(c for _, c in courses)
         lines.append(f"  {domain}：{total:g}學分")
-    lines.append(f"  多元選修合計：{multi_total:g}學分 / {multi_domains_count} 個領域")
-    if multi_total < multi_elective_min_credits:
-        lines.append(f"  → 結論：多元選修尚缺 {multi_elective_min_credits - multi_total:g} 學分。")
+    if unmatched_multi:
+        lines.append(f"  未對應領域課程（仍計入學分）：")
+        for r in unmatched_multi:
+            lines.append(f"    - {r.get('課程名稱','')}（{r.get('學分','?')}學分，{r.get('課程類別','')}）")
+    lines.append(f"  多元選修合計：{multi_total_all:g}學分（已對應領域 {multi_total:g}學分）/ {multi_domains_count} 個已辨識領域")
+    if multi_total_all < multi_elective_min_credits:
+        lines.append(f"  → 結論：多元選修尚缺 {multi_elective_min_credits - multi_total_all:g} 學分。")
     elif multi_domains_count < multi_elective_min_domains:
-        lines.append(f"  → 結論：學分足夠但領域數不足（需{multi_elective_min_domains}，目前{multi_domains_count}）。")
+        lines.append(f"  → 結論：學分足夠但已辨識領域數不足（需{multi_elective_min_domains}，目前{multi_domains_count}），需人工確認未對應課程的領域。")
     else:
         lines.append(f"  → 結論：多元選修已達標。")
 
@@ -415,9 +440,9 @@ def _build_precomputed_context(
     confirmed_gaps: list[str] = []
     if not domain_meets_requirement:
         confirmed_gaps.append(f"系選修：領域達標數不足（需{elective_required_domains}個，目前{len(domains_over_12)}個）")
-    if multi_total < multi_elective_min_credits:
-        confirmed_gaps.append(f"通識多元選修：差 {multi_elective_min_credits - multi_total:g} 學分")
-    elif multi_domains_count < multi_elective_min_domains:
+    if multi_total_all < multi_elective_min_credits:
+        confirmed_gaps.append(f"通識多元選修：差 {multi_elective_min_credits - multi_total_all:g} 學分")
+    elif multi_domains_count < multi_elective_min_domains and not unmatched_multi:
         confirmed_gaps.append(f"通識多元選修：領域數不足（需{multi_elective_min_domains}，目前{multi_domains_count}）")
 
     credits_note = f"目前 {total_expected_credits:g} / {REQUIRED_TOTAL:g}"

@@ -32,3 +32,5 @@ Thumbs.db
 # Tests and docs
 tests/
 docs/
+
+.playwright-mcp/
