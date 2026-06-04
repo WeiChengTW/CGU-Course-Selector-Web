@@ -12,6 +12,9 @@ from app.services.session_service import (
     destroy_session,
     get_session_id,
     is_logged_in,
+    restore_course_record,
+    save_course_record,
+    save_session_meta,
 )
 from app.templates_config import render_template
 
@@ -42,13 +45,26 @@ async def login(
 ):
     session_id, session_dir = create_session_dir()
 
+    username = username.strip()
+
     try:
-        await asyncio.to_thread(
-            sync_moocs_courses,
-            username=username.strip(),
-            password=password,
-            session_dir=session_dir,
-        )
+        saved_meta = restore_course_record(username, session_dir)
+        if saved_meta is not None:
+            save_session_meta(
+                session_dir,
+                username,
+                saved_meta.get("last_sync_result"),
+                saved_meta.get("last_synced_at"),
+            )
+        else:
+            sync_result = await asyncio.to_thread(
+                sync_moocs_courses,
+                username=username,
+                password=password,
+                session_dir=session_dir,
+            )
+            save_course_record(username, session_dir, sync_result)
+            save_session_meta(session_dir, username, sync_result)
     except Exception:
         destroy_session(session_id)
         return render_template(

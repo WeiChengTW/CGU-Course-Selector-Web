@@ -18,6 +18,9 @@ async def graduation_page(request: Request):
         return RedirectResponse("/login", status_code=303)
 
     session_dir = get_session_dir(request)
+    if session_dir is None:
+        return RedirectResponse("/login", status_code=303)
+
     svc = GraduationService(session_dir)
     status = svc.get_status()
     report = svc.get_report() if status.get("status") == "done" else None
@@ -47,6 +50,9 @@ async def start_analysis(
         return RedirectResponse("/login", status_code=303)
 
     session_dir = get_session_dir(request)
+    if session_dir is None:
+        return RedirectResponse("/login", status_code=303)
+
     svc = GraduationService(session_dir)
 
     # Save uploaded PDFs
@@ -93,6 +99,9 @@ async def get_status(request: Request):
         return HTMLResponse("")
 
     session_dir = get_session_dir(request)
+    if session_dir is None:
+        return HTMLResponse("")
+
     svc = GraduationService(session_dir)
     status = svc.get_status()
     report = svc.get_report() if status.get("status") == "done" else None
@@ -113,6 +122,9 @@ async def reset_analysis(request: Request):
         return RedirectResponse("/login", status_code=303)
 
     session_dir = get_session_dir(request)
+    if session_dir is None:
+        return RedirectResponse("/login", status_code=303)
+
     GraduationService(session_dir).reset()
     return RedirectResponse("/graduation", status_code=303)
 

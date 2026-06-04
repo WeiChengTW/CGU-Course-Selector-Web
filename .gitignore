@@ -34,3 +34,5 @@ tests/
 docs/
 
 .env
+
+data

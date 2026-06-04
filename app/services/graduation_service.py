@@ -34,8 +34,12 @@ class GraduationService:
     def get_report(self) -> Optional[dict]:
         if not self.report_path.exists():
             return None
-        with self.report_path.open("r", encoding="utf-8") as f:
-            return json.load(f)
+        try:
+            with self.report_path.open("r", encoding="utf-8") as f:
+                return json.load(f)
+        except json.JSONDecodeError:
+            self.write_status("error", "畢業分析報告檔案損毀，請重新上傳分析")
+            return None
 
     def has_report(self) -> bool:
         return self.report_path.exists()
@@ -43,8 +47,11 @@ class GraduationService:
     def get_status(self) -> dict:
         if not self.status_path.exists():
             return {"status": "none"}
-        with self.status_path.open("r", encoding="utf-8") as f:
-            return json.load(f)
+        try:
+            with self.status_path.open("r", encoding="utf-8") as f:
+                return json.load(f)
+        except json.JSONDecodeError:
+            return {"status": "error", "message": "畢業分析狀態檔案損毀，請重新上傳分析"}
 
     def write_status(self, status: str, message: str = "") -> None:
         data = {"status": status, "message": message, "updated_at": datetime.now().isoformat()}

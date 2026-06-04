@@ -17,4 +17,4 @@ env = Environment(
 def render_template(name: str, context: dict) -> HTMLResponse:
     """渲染模板並返回 HTMLResponse"""
     template = env.get_template(name)
-    return HTMLResponse(content=template.render(context))
+    return HTMLResponse(content=template.render(**context))

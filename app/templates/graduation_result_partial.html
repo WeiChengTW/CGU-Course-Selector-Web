@@ -1,4 +1,6 @@
 {% set r = report %}
+{% set recognized_credits = r.recognized_credits | float %}
+{% set required_credits = r.required_credits | float %}
 <div x-data="graduationApp()" x-init="init()" class="space-y-6">
 
     <!-- 頂部狀態 + 重新分析 -->
@@ -26,13 +28,13 @@
                 <p class="text-gray-500 mt-1 text-sm">{{ r.one_sentence_summary }}</p>
             </div>
             <div class="text-right">
-                <div class="text-4xl font-bold {% if r.recognized_credits >= r.required_credits %}text-green-600{% else %}text-[#E39800]{% endif %}">
+                <div class="text-4xl font-bold {% if recognized_credits >= required_credits %}text-green-600{% else %}text-[#E39800]{% endif %}">
                     {{ r.recognized_credits }} / {{ r.required_credits }}
                 </div>
                 <div class="text-sm text-gray-500">已認列 / 需要</div>
             </div>
         </div>
-        {% set pct = [(r.recognized_credits / r.required_credits * 100) | round | int, 100] | min %}
+        {% set pct = [((recognized_credits / required_credits * 100) if required_credits > 0 else 0) | round | int, 100] | min %}
         <div class="overflow-hidden h-3 rounded bg-orange-100">
             <div class="h-3 rounded bg-gradient-to-r from-[#E39800] to-[#C48400] transition-all"
                  style="width: {{ pct }}%"></div>

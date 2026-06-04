@@ -162,9 +162,12 @@ def sync_moocs_courses(
     raw_path = session_dir / "moocs_courses.txt"
     generated_path = session_dir / "courses_detail.csv"
     taken_path = session_dir / "taken_courses.csv"
+    raw_tmp_path = session_dir / "moocs_courses.txt.tmp"
+    generated_tmp_path = session_dir / "courses_detail.csv.tmp"
+    taken_tmp_path = session_dir / "taken_courses.csv.tmp"
 
     grade_rows = scrape_moocs_grade_rows(username, password, headless=headless)
-    with taken_path.open("w", encoding="utf-8-sig", newline="") as target_file:
+    with taken_tmp_path.open("w", encoding="utf-8-sig", newline="") as target_file:
         writer = csv.DictWriter(
             target_file,
             fieldnames=["學年學期", "課程名稱", "學分數", "修課成績"],
@@ -177,10 +180,14 @@ def sync_moocs_courses(
         password,
         headless=headless,
         max_pages=max_pages,
-        save_path=raw_path,
+        save_path=raw_tmp_path,
         debug=False,
     )
-    catalog_count, total_credits, errors = write_details(courses, generated_path, delay)
+    catalog_count, total_credits, errors = write_details(courses, generated_tmp_path, delay)
+
+    taken_tmp_path.replace(taken_path)
+    raw_tmp_path.replace(raw_path)
+    generated_tmp_path.replace(generated_path)
 
     return {
         "count": len(grade_rows),
