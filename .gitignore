@@ -32,3 +32,6 @@ Thumbs.db
 # Tests and docs
 tests/
 docs/
+
+.env
+
