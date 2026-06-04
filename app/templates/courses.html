@@ -6,7 +6,7 @@
 <div x-data="coursesApp()">
     <div class="flex flex-col gap-4 mb-6 md:flex-row md:items-start md:justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-[#333333]">📚 已修課程</h1>
+            <h1 class="text-3xl font-bold text-[#333333]">已修課程</h1>
             <p class="text-sm text-gray-500 mt-2" x-show="lastSyncedAt">
                 最後同步：<span x-text="formatDateTime(lastSyncedAt)"></span>
             </p>
@@ -133,7 +133,7 @@
 
     <!-- 畢業進度 -->
     <div class="mt-8 bg-gradient-to-r from-[#E8E2D6] to-[#F9F9F9] rounded-xl p-6 border border-[#D1C7AC]">
-        <h3 class="font-semibold text-[#333333] mb-4 text-lg">📊 畢業進度</h3>
+        <h3 class="font-semibold text-[#333333] mb-4 text-lg">畢業進度</h3>
         <div class="flex items-center justify-between mb-2">
             <span class="text-gray-600">已修學分 / 畢業門檻</span>
             <span class="text-[#E39800] font-bold" x-text="passedCredits + ' / 128'"></span>
@@ -301,9 +301,9 @@ function coursesApp() {
         getStatusText(course) {
             const status = this.getCourseStatus(course);
             switch (status) {
-                case 'passed': return '✓ 已通過';
-                case 'failed': return '✗ 未通過';
-                case 'in_progress': return '⏳ 修習中';
+                case 'passed': return '已通過';
+                case 'failed': return '未通過';
+                case 'in_progress': return '修習中';
                 default: return '未知';
             }
         },

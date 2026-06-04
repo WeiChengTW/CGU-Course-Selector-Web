@@ -39,7 +39,7 @@
             <div class="h-3 rounded bg-gradient-to-r from-[#E39800] to-[#C48400] transition-all"
                  style="width: {{ pct }}%"></div>
         </div>
-        <p class="text-right text-xs text-gray-400 mt-1">{{ pct }}%</p>
+        <p class="text-right text-xs text-gray-500 mt-1">{{ pct }}%</p>
     </div>
 
     <!-- 各類別完成狀況 -->
@@ -59,9 +59,10 @@
                     完成：{{ req.completed }} ｜ 需要：{{ req.required }}
                     {% if req.missing %} ｜ 缺少：{{ req.missing }}{% endif %}
                 </div>
+                {% set req_pct = 100 if req.status == '已完成' else ([((req.completed | string | replace('學分','') | replace('已修','') | trim | float(0)) / ([req.required | string | replace('學分','') | replace('需','') | trim | float(1), 1] | max) * 100) | round | int, 100] | min) %}
                 <div class="w-full bg-gray-200 rounded-full h-2">
                     <div class="h-2 rounded-full {% if req.status == '已完成' %}bg-green-500{% else %}bg-[#E39800]{% endif %}"
-                         style="width: {{ 100 if req.status == '已完成' else 60 }}%"></div>
+                         style="width: {{ req_pct }}%"></div>
                 </div>
             </div>
             {% endfor %}
@@ -135,7 +136,10 @@
     <!-- 需人工確認 -->
     {% if r.manual_review_items %}
     <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
-        <h3 class="font-semibold text-orange-800 mb-2">⚠ 需人工確認</h3>
+        <h3 class="font-semibold text-orange-800 mb-2 flex items-center gap-1.5">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/></svg>
+            需人工確認
+        </h3>
         <ul class="space-y-1">
             {% for item in r.manual_review_items %}
             <li class="text-sm text-orange-700">
@@ -146,7 +150,7 @@
     </div>
     {% endif %}
 
-    <p class="text-xs text-gray-400 text-center">
+    <p class="text-xs text-gray-500 text-center">
         本報告由 LLM 根據提供資料分析，正式畢業資格仍以系辦/教務處認定為準。
     </p>
 </div>
