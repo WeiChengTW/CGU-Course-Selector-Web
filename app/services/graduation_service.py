@@ -198,7 +198,7 @@ def run_graduation_analysis(
         summary = summarize_courses(merged_csv)
 
         # 6. Call LLM
-        svc.write_status("analyzing", "正在進行 LLM 畢業學分分析（此步驟可能需要 1-2 分鐘）...")
+        svc.write_status("analyzing", "正在進行 LLM 課程分類與畢業學分分析（此步驟可能需要 2-3 分鐘）...")
         call_llm_analyzer(
             csv_path=merged_csv,
             rules_md_paths=rules_md_paths,
