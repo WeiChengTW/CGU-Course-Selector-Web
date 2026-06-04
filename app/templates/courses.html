@@ -6,7 +6,7 @@
 <div x-data="coursesApp()">
     <div class="flex flex-col gap-4 mb-6 md:flex-row md:items-start md:justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-[#333333]">📚 已修課程</h1>
+            <h1 class="text-3xl font-bold text-[#333333]">已修課程</h1>
             <p class="text-sm text-gray-500 mt-2" x-show="lastSyncedAt">
                 最後同步：<span x-text="formatDateTime(lastSyncedAt)"></span>
             </p>
@@ -112,7 +112,7 @@
                         <td class="px-4 py-3 text-sm text-center text-gray-700" x-text="course.學分數"></td>
                         <td class="px-4 py-3 text-sm text-center">
                             <span x-show="course.修課成績" x-text="course.修課成績" class="text-gray-700"></span>
-                            <span x-show="!course.修課成績" class="text-gray-400">-</span>
+                            <span x-show="!course.修課成績" class="text-gray-500">-</span>
                         </td>
                         <td class="px-4 py-3 text-sm text-center">
                             <span class="px-2 py-1 rounded text-xs font-medium"
@@ -126,14 +126,14 @@
         </table>
 
         <!-- 空狀態 -->
-        <div x-show="filteredCourses.length === 0" class="text-center py-12 text-gray-400">
+        <div x-show="filteredCourses.length === 0" class="text-center py-12 text-gray-500">
             尚無修課資料，請先同步 MOOCS 課程清單。
         </div>
     </div>
 
     <!-- 畢業進度 -->
     <div class="mt-8 bg-gradient-to-r from-[#E8E2D6] to-[#F9F9F9] rounded-xl p-6 border border-[#D1C7AC]">
-        <h3 class="font-semibold text-[#333333] mb-4 text-lg">📊 畢業進度</h3>
+        <h3 class="font-semibold text-[#333333] mb-4 text-lg">畢業進度</h3>
         <div class="flex items-center justify-between mb-2">
             <span class="text-gray-600">已修學分 / 畢業門檻</span>
             <span class="text-[#E39800] font-bold" x-text="passedCredits + ' / 128'"></span>
@@ -236,7 +236,7 @@ function coursesApp() {
 
         get inProgressCredits() {
             return this.courses
-                .filter(c => !c.修課成績 || c.修課成績.trim() === '')
+                .filter(c => this.isInProgressScore(c.修課成績))
                 .reduce((sum, c) => sum + parseFloat(c.學分數 || 0), 0);
         },
 
@@ -252,17 +252,22 @@ function coursesApp() {
         // 判斷是否通過
         isPassed(score) {
             if (!score) return false;
-            score = score.trim();
-            if (score === 'S') return false;  // 停修
+            score = score.trim().toUpperCase();
+            if (['S', 'I'].includes(score)) return false;
             if (['P', '通過', '及格'].includes(score)) return true;
             const num = parseFloat(score);
             return !isNaN(num) && num >= 60;
         },
 
+        isInProgressScore(score) {
+            if (!score) return true;
+            return score.trim().toUpperCase() === 'I';
+        },
+
         // 取得課程狀態
         getCourseStatus(course) {
             const score = course.修課成績;
-            if (!score || score.trim() === '') return 'in_progress';
+            if (this.isInProgressScore(score)) return 'in_progress';
             if (this.isPassed(score)) return 'passed';
             return 'failed';
         },
@@ -301,9 +306,9 @@ function coursesApp() {
         getStatusText(course) {
             const status = this.getCourseStatus(course);
             switch (status) {
-                case 'passed': return '✓ 已通過';
-                case 'failed': return '✗ 未通過';
-                case 'in_progress': return '⏳ 修習中';
+                case 'passed': return '已通過';
+                case 'failed': return '未通過';
+                case 'in_progress': return '修習中';
                 default: return '未知';
             }
         },

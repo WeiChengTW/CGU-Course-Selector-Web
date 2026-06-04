@@ -47,6 +47,7 @@ async def search_courses(
     course_service = CourseService(session_dir)
 
     try:
+        course_name = cName or keyward
         results = CatalogService.search_courses(
             termid=termid,
             departmentid=departmentid,
@@ -54,7 +55,7 @@ async def search_courses(
             sectionid=sectionid,
             call_id=call_id,
             teaName=teaName,
-            cName=cName,
+            cName=course_name,
             year=year,
             fieldid=fieldid,
             week=week,

@@ -36,13 +36,11 @@ class CourseService:
     def _is_passed(self, score: str) -> bool:
         """判斷成績是否通過（60分以上或特殊通過標記）"""
         if not score:
-            # 沒有成績表示正在修習中，視為未通過
             return False
 
-        score = score.strip()
+        score = score.strip().upper()
 
-        # 停修標記（S = Stop，不算通過）
-        if score == 'S':
+        if score in ('S', 'I'):
             return False
 
         # 特殊通過標記
@@ -105,8 +103,8 @@ class CourseService:
 
         for c in matches:
             score = self._get_score(c)
-            if not score:
-                return {"status": "in_progress", "score": None, "credits": self._get_credits(c)}
+            if not score or score.upper() == "I":
+                return {"status": "in_progress", "score": score or None, "credits": self._get_credits(c)}
 
         if matches:
             c = matches[0]

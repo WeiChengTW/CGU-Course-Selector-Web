@@ -517,7 +517,7 @@ def _build_precomputed_context(
 
     in_progress = [
         r for r in records
-        if r.get("成績", "").strip() == "" and r.get("是否通過", "") == "False"
+        if r.get("成績", "").strip().upper() in {"", "I"} and r.get("是否通過", "") == "False"
     ]
     english_intensive = [r for r in records if "英文專修學習" in r.get("課程名稱", "")]
     honors_courses = {"批判性思考：品德與幸福", "青年領袖論壇"}
@@ -541,7 +541,7 @@ def _build_precomputed_context(
         name = r.get("課程名稱", "").strip()
         credits = float(r.get("學分", 0) or 0)
         passed = r.get("是否通過", "") == "True"
-        inprogress = r.get("成績", "").strip() == "" and r.get("是否通過", "") == "False"
+        inprogress = r.get("成績", "").strip().upper() in {"", "I"} and r.get("是否通過", "") == "False"
         if not passed and not inprogress:
             continue
         matched_domains = [
@@ -707,26 +707,19 @@ def _build_precomputed_context(
     lines.append(f"\n■ 通識多元選修（規則：{multi_elective_min_credits}學分，至少{multi_elective_min_domains}個領域）：")
     for domain, courses in multi_domain_map.items():
         total = sum(c for _, c in courses)
-<<<<<<< HEAD
-        lines.append(f"  {domain}：{total:g}學分")
+        course_list = ", ".join(f"{n}({c:g})" for n, c in courses)
+        lines.append(f"  {domain}：{total:g}學分（{course_list}）")
     if unmatched_multi:
-        lines.append(f"  未對應領域課程（仍計入學分）：")
+        lines.append("  未對應領域課程（仍計入學分）：")
         for r in unmatched_multi:
             lines.append(f"    - {r.get('課程名稱','')}（{r.get('學分','?')}學分，{r.get('課程類別','')}）")
     lines.append(f"  多元選修合計：{multi_total_all:g}學分（已對應領域 {multi_total:g}學分）/ {multi_domains_count} 個已辨識領域")
-    if multi_total_all < multi_elective_min_credits:
-        lines.append(f"  → 結論：多元選修尚缺 {multi_elective_min_credits - multi_total_all:g} 學分。")
-=======
-        course_list = ", ".join(f"{n}({c:g})" for n, c in courses)
-        lines.append(f"  {domain}：{total:g}學分（{course_list}）")
-    lines.append(f"  多元選修合計：{multi_total:g}學分 / {multi_domains_count} 個領域")
     if excluded_from_multi:
-        lines.append(f"  ⚠ 以下課程不得列入多元選修（規則排除）：")
+        lines.append("  ⚠ 以下課程不得列入多元選修（規則排除）：")
         for name, cr, reason in excluded_from_multi:
             lines.append(f"    - {name}（{cr:g}學分）：{reason}")
-    if multi_total < multi_elective_min_credits:
-        lines.append(f"  → 結論：多元選修尚缺 {multi_elective_min_credits - multi_total:g} 學分。")
->>>>>>> a330e8eacfddec5658d55923ed8d4ad7077282ff
+    if multi_total_all < multi_elective_min_credits:
+        lines.append(f"  → 結論：多元選修尚缺 {multi_elective_min_credits - multi_total_all:g} 學分。")
     elif multi_domains_count < multi_elective_min_domains:
         lines.append(f"  → 結論：學分足夠但已辨識領域數不足（需{multi_elective_min_domains}，目前{multi_domains_count}），需人工確認未對應課程的領域。")
     else:
@@ -773,6 +766,185 @@ def _build_precomputed_context(
     return "\n".join(lines)
 
 
+def _credit_value(value) -> float:
+    try:
+        return float(value or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _format_credit(value: float) -> str:
+    return f"{value:g}"
+
+
+def _record_status(record: dict) -> str:
+    if record.get("是否通過", "") == "True":
+        return "已通過"
+    score = record.get("成績", "").strip().upper()
+    if score == "" or score == "I":
+        return "進行中"
+    return "未採計"
+
+
+def _course_detail(record: dict) -> dict:
+    return {
+        "term": record.get("學年學期", ""),
+        "name": record.get("課程名稱", ""),
+        "credits": _credit_value(record.get("學分", 0)),
+        "score": record.get("成績", ""),
+        "status": _record_status(record),
+        "category": record.get("課程類別", ""),
+    }
+
+
+def _summarize_detail_courses(records: list[dict], *, include_categories: set[str] | None = None) -> dict:
+    courses = []
+    failed_courses = []
+    passed_credits = 0.0
+    in_progress_credits = 0.0
+    failed_credits = 0.0
+
+    for record in records:
+        if include_categories is not None and record.get("課程類別", "") not in include_categories:
+            continue
+        detail = _course_detail(record)
+        if detail["status"] == "已通過":
+            passed_credits += detail["credits"]
+            courses.append(detail)
+        elif detail["status"] == "進行中":
+            in_progress_credits += detail["credits"]
+            courses.append(detail)
+        else:
+            failed_credits += detail["credits"]
+            failed_courses.append(detail)
+
+    total_counted = passed_credits + in_progress_credits
+    return {
+        "passed_credits": passed_credits,
+        "in_progress_credits": in_progress_credits,
+        "total_counted_credits": total_counted,
+        "failed_credits": failed_credits,
+        "courses": courses,
+        "failed_courses": failed_courses,
+    }
+
+
+def _extract_required_credits(value, default: float = 0.0) -> float:
+    match = re.search(r"[\d.]+", str(value or ""))
+    return float(match.group(0)) if match else default
+
+
+def _status_from_credits(passed: float, in_progress: float, required: float) -> str:
+    if required <= 0:
+        return "需人工確認"
+    if passed >= required:
+        return "已完成"
+    if passed + in_progress >= required:
+        return "進行中"
+    return "未完成"
+
+
+def _missing_from_credits(passed: float, in_progress: float, required: float) -> str:
+    total = passed + in_progress
+    if required <= 0:
+        return "需人工確認"
+    if passed >= required:
+        return "無"
+    if total >= required:
+        return "無確定學分缺口；需完成進行中課程"
+    return f"尚缺{_format_credit(required - total)}學分"
+
+
+def _completed_text(detail: dict) -> str:
+    passed = detail["passed_credits"]
+    in_progress = detail["in_progress_credits"]
+    total = detail["total_counted_credits"]
+    if in_progress > 0:
+        return f"{_format_credit(passed)}學分已通過 + {_format_credit(in_progress)}學分進行中 = {_format_credit(total)}學分"
+    return f"{_format_credit(passed)}學分"
+
+
+def _build_system_elective_domains(records: list[dict], rules_index: dict | None) -> list[dict]:
+    if rules_index:
+        dyn = _extract_domains_from_index(rules_index)
+        elective_domains = dyn["elective_domains"] or _ELECTIVE_DOMAINS
+    else:
+        elective_domains = _ELECTIVE_DOMAINS
+
+    domains = {name: {"name": name, "passed_credits": 0.0, "in_progress_credits": 0.0, "courses": []} for name in elective_domains}
+    assigned: set[str] = set()
+    for record in records:
+        if record.get("課程類別", "") != "系定選修":
+            continue
+        detail = _course_detail(record)
+        if detail["status"] == "未採計":
+            continue
+        name = detail["name"]
+        for domain, course_names in elective_domains.items():
+            if not any(name == c or c in name or name in c for c in course_names):
+                continue
+            key = f"{domain}:{name}:{detail['term']}"
+            if key in assigned:
+                continue
+            assigned.add(key)
+            if detail["status"] == "已通過":
+                domains[domain]["passed_credits"] += detail["credits"]
+            else:
+                domains[domain]["in_progress_credits"] += detail["credits"]
+            domains[domain]["courses"].append(detail)
+
+    result = []
+    for domain in domains.values():
+        domain["total_counted_credits"] = domain["passed_credits"] + domain["in_progress_credits"]
+        if domain["total_counted_credits"] > 0:
+            result.append(domain)
+    return result
+
+
+def _build_requirement_course_details(records: list[dict], rules_index: dict | None = None) -> dict[str, dict]:
+    details = {
+        "畢業總學分": _summarize_detail_courses(records),
+        "系定必修": _summarize_detail_courses(records, include_categories={"系定必修"}),
+        "系定選修": _summarize_detail_courses(records, include_categories={"系定選修"}),
+        "校定必修": _summarize_detail_courses(records, include_categories={"校定必修"}),
+        "校定選修": _summarize_detail_courses(records, include_categories={"校定選修"}),
+        "通識": _summarize_detail_courses(records, include_categories={"校定必修", "校定選修"}),
+    }
+    details["系定選修"]["domains"] = _build_system_elective_domains(records, rules_index)
+    return details
+
+
+def _matching_detail_key(category: str) -> str | None:
+    if "總學分" in category:
+        return "畢業總學分"
+    if "系定必修" in category or "系必修" in category:
+        return "系定必修"
+    if "系定選修" in category or "系選修" in category:
+        return "系定選修"
+    if "通識" in category and "多元" not in category:
+        return None
+    if "校定必修" in category:
+        return "校定必修"
+    if "校定選修" in category:
+        return "校定選修"
+    return None
+
+
+def _normalize_requirement_from_detail(req: dict, detail: dict, required_default: float = 0.0) -> None:
+    required = _extract_required_credits(req.get("required"), required_default)
+    passed = detail["passed_credits"]
+    in_progress = detail["in_progress_credits"]
+    total = detail["total_counted_credits"]
+    req["course_details"] = detail
+    req["progress_percent"] = min(100, round((total / required * 100) if required > 0 else 0))
+    req["completed"] = _completed_text(detail)
+    if required > 0:
+        req["status"] = _status_from_credits(passed, in_progress, required)
+        req["missing"] = _missing_from_credits(passed, in_progress, required)
+    elif str(req.get("missing", "")).strip() in {"", "無"}:
+        req["status"] = "已完成"
+
+
 def _apply_precomputed_overrides(
     report_data: dict,
     precomputed_context: str,
@@ -781,17 +953,48 @@ def _apply_precomputed_overrides(
     honor_program: bool | None,
     classifications: list[dict] | None = None,
 ) -> None:
-    """LLM 輸出後，用 Python 計算的精確值覆寫容易算錯的欄位（通識多元選修）。"""
-    ctx = _build_precomputed_context(
-        records, rules_index=rules_index, honor_program=honor_program, classifications=classifications
-    )
+    """Use deterministic CSV-derived values to normalize LLM report arithmetic and details."""
+    details = _build_requirement_course_details(records, rules_index)
+    total_detail = details["畢業總學分"]
 
-    # 從 precomputed context 取得多元選修正確數字
-    m_total = re.search(r"多元選修合計：([\d.]+)學分 / (\d+) 個領域", ctx)
-    m_req = re.search(r"通識多元選修（規則：(\d+)學分，至少(\d+)個領域）", ctx)
-    m_gap = re.search(r"多元選修尚缺 ([\d.]+) 學分", ctx)
-    m_json = re.search(r"★ 通識多元選修 requirements 必填 JSON.*?\n  (\{.*?\})", ctx, re.DOTALL)
+    dyn = _extract_domains_from_index(rules_index) if rules_index else {}
+    required_total = float(dyn.get("total_required_credits") or report_data.get("required_credits") or 128)
+    report_data["passed_credits"] = total_detail["passed_credits"]
+    report_data["in_progress_credits"] = total_detail["in_progress_credits"]
+    report_data["recognized_credits"] = total_detail["total_counted_credits"]
+    report_data["required_credits"] = required_total
+    report_data["missing_credits"] = max(0, required_total - total_detail["total_counted_credits"])
 
+    for req in report_data.get("requirements", []):
+        category = str(req.get("category", ""))
+        key = _matching_detail_key(category)
+        if key and key in details:
+            default_required = required_total if key == "畢業總學分" else 0.0
+            _normalize_requirement_from_detail(req, details[key], default_required)
+        elif "通識" in category and "多元" not in category:
+            req["course_details"] = details["通識"]
+            if str(req.get("missing", "")).strip() in {"", "無"}:
+                req["status"] = "已完成"
+                req["progress_percent"] = 100
+
+        if "多元" in category and classifications:
+            _apply_multi_elective_requirement(req, precomputed_context)
+
+    _remove_resolved_missing_items(report_data)
+    if report_data["missing_credits"] > 0:
+        report_data["status"] = "尚不可畢業"
+    elif total_detail["in_progress_credits"] > 0:
+        report_data["status"] = "進行中"
+    elif any(req.get("status") in {"未完成", "需人工確認"} for req in report_data.get("requirements", [])):
+        report_data["status"] = "需人工確認"
+    else:
+        report_data["status"] = "符合畢業資格"
+
+
+def _apply_multi_elective_requirement(req: dict, precomputed_context: str) -> None:
+    m_total = re.search(r"多元選修合計：([\d.]+)學分(?:（已對應領域 [\d.]+學分）)?/ (\d+) 個", precomputed_context)
+    m_req = re.search(r"通識多元選修（規則：(\d+)學分，至少(\d+)個領域）", precomputed_context)
+    m_gap = re.search(r"多元選修尚缺 ([\d.]+) 學分", precomputed_context)
     if not m_total:
         return
 
@@ -799,49 +1002,38 @@ def _apply_precomputed_overrides(
     correct_domains = int(m_total.group(2))
     req_cr = int(m_req.group(1)) if m_req else 11
     req_d = int(m_req.group(2)) if m_req else 3
-    gap = float(m_gap.group(1)) if m_gap else (req_cr - correct_total)
+    gap = max(0, float(m_gap.group(1)) if m_gap else (req_cr - correct_total))
     is_done = correct_total >= req_cr and correct_domains >= req_d
+    req["status"] = "已完成" if is_done else "未完成"
+    req["completed"] = f"{correct_total:g}學分（{correct_domains}個領域）"
+    req["missing"] = "無" if is_done else f"尚缺{gap:g}學分"
+    req["progress_percent"] = min(100, round((correct_total / req_cr * 100) if req_cr > 0 else 0))
+    req.setdefault("course_details", {})
+    req["course_details"].setdefault("passed_credits", correct_total)
+    req["course_details"].setdefault("in_progress_credits", 0)
+    req["course_details"].setdefault("total_counted_credits", correct_total)
 
-    # 覆寫 requirements 中的多元選修欄位
-    for req in report_data.get("requirements", []):
-        if "多元" in req.get("category", ""):
-            req["status"] = "已完成" if is_done else "未完成"
-            req["completed"] = f"{correct_total:g}學分（{correct_domains}個領域）"
-            req["missing"] = "無" if is_done else f"尚缺{gap:g}學分"
-            req["evidence"] = m_json.group(1) if m_json else f"Python預計算：{correct_total:g}學分/{correct_domains}個領域"
-            break
 
-    # 覆寫 missing_items 中的多元選修
-    if is_done:
-        report_data["missing_items"] = [
-            item for item in report_data.get("missing_items", [])
-            if "多元" not in item.get("category", "")
-        ]
-    else:
-        found = False
-        for item in report_data.get("missing_items", []):
-            if "多元" in item.get("category", ""):
-                item["credits"] = gap
-                item["recommended_action"] = f"補修通識多元選修課程至{req_cr}學分，且須涵蓋至少{req_d}個領域"
-                found = True
-                break
-        if not found:
-            report_data.setdefault("missing_items", []).append({
-                "priority": "high",
-                "category": "通識多元選修",
-                "item": "多元選修學分不足",
-                "credits": gap,
-                "recommended_action": f"補修通識多元選修課程至{req_cr}學分，且須涵蓋至少{req_d}個領域",
-            })
+def _remove_resolved_missing_items(report_data: dict) -> None:
+    resolved_categories = {
+        str(req.get("category", ""))
+        for req in report_data.get("requirements", [])
+        if req.get("status") in {"已完成", "進行中"}
+        and str(req.get("missing", "")).strip() in {"", "無", "無確定學分缺口；需完成進行中課程"}
+    }
 
-    # 同步更新 missing_credits（可能因為多元選修被修正而改變）
-    gap_total = sum(
-        float(item.get("credits", 0) or 0)
-        for item in report_data.get("missing_items", [])
-        if item.get("credits") and item.get("item") and "領域" not in str(item.get("item", ""))
-    )
-    if gap_total > 0:
-        report_data["missing_credits"] = gap_total
+    def keep(item: dict) -> bool:
+        category = str(item.get("category", ""))
+        if any(category and category in req_cat for req_cat in resolved_categories):
+            return False
+        if _credit_value(item.get("credits", 0)) <= 0 and "領域" not in str(item.get("item", "")):
+            return False
+        return True
+
+    report_data["missing_items"] = [
+        item for item in report_data.get("missing_items", [])
+        if not isinstance(item, dict) or keep(item)
+    ]
 
 
 def call_llm_analyzer(

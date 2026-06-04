@@ -39,7 +39,7 @@
             <div class="h-3 rounded bg-gradient-to-r from-[#E39800] to-[#C48400] transition-all"
                  style="width: {{ pct }}%"></div>
         </div>
-        <p class="text-right text-xs text-gray-400 mt-1">{{ pct }}%</p>
+        <p class="text-right text-xs text-gray-500 mt-1">{{ pct }}%</p>
     </div>
 
     <!-- 各類別完成狀況 -->
@@ -48,20 +48,102 @@
         <h3 class="text-lg font-semibold text-[#333333] mb-4">各類別完成狀況</h3>
         <div class="space-y-4">
             {% for req in r.requirements %}
-            <div>
-                <div class="flex justify-between text-sm mb-1">
-                    <span class="font-medium text-gray-700">{{ req.category }}</span>
-                    <span class="{% if req.status == '已完成' %}text-green-600{% else %}text-[#C48400]{% endif %} font-medium">
-                        {{ req.status }}
-                    </span>
-                </div>
-                <div class="text-xs text-gray-500 mb-1">
-                    完成：{{ req.completed }} ｜ 需要：{{ req.required }}
-                    {% if req.missing %} ｜ 缺少：{{ req.missing }}{% endif %}
-                </div>
-                <div class="w-full bg-gray-200 rounded-full h-2">
-                    <div class="h-2 rounded-full {% if req.status == '已完成' %}bg-green-500{% else %}bg-[#E39800]{% endif %}"
-                         style="width: {{ 100 if req.status == '已完成' else 60 }}%"></div>
+            <div class="rounded-lg border border-gray-200 p-4">
+                <button type="button" class="w-full text-left" @click="toggleRequirement({{ loop.index0 }})">
+                    <div class="flex items-center justify-between gap-3 text-sm mb-1">
+                        <span class="font-medium text-gray-700">{{ req.category }}</span>
+                        <span class="flex items-center gap-2">
+                            <span class="{% if req.status == '已完成' %}text-green-600{% elif req.status == '進行中' %}text-blue-600{% else %}text-[#C48400]{% endif %} font-medium">
+                                {{ req.status }}
+                            </span>
+                            <span class="text-gray-500" x-text="isRequirementExpanded({{ loop.index0 }}) ? '收合' : '展開'"></span>
+                        </span>
+                    </div>
+                    <div class="text-xs text-gray-500 mb-1">
+                        完成：{{ req.completed }} ｜ 需要：{{ req.required }}
+                        {% if req.missing %} ｜ 缺少：{{ req.missing }}{% endif %}
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="h-2 rounded-full {% if req.status == '已完成' %}bg-green-500{% elif req.status == '進行中' %}bg-blue-500{% else %}bg-[#E39800]{% endif %}"
+                             style="width: {{ req.progress_percent | default(100 if req.status == '已完成' else 60) }}%"></div>
+                    </div>
+                </button>
+
+                <div x-show="isRequirementExpanded({{ loop.index0 }})" x-cloak class="mt-4 border-t border-gray-100 pt-4">
+                    {% if req.course_details %}
+                    {% set details = req.course_details %}
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 text-sm">
+                        <div class="rounded bg-green-50 p-3">
+                            <div class="text-xs text-green-700">已通過</div>
+                            <div class="font-semibold text-green-800">{{ details.passed_credits | default(0) }} 學分</div>
+                        </div>
+                        <div class="rounded bg-blue-50 p-3">
+                            <div class="text-xs text-blue-700">進行中</div>
+                            <div class="font-semibold text-blue-800">{{ details.in_progress_credits | default(0) }} 學分</div>
+                        </div>
+                        <div class="rounded bg-orange-50 p-3">
+                            <div class="text-xs text-[#C48400]">計入合計</div>
+                            <div class="font-semibold text-[#C48400]">{{ details.total_counted_credits | default(0) }} 學分</div>
+                        </div>
+                    </div>
+
+                    {% if details.domains %}
+                    <div class="space-y-3 mb-4">
+                        {% for domain in details.domains %}
+                        <div class="rounded bg-gray-50 border border-gray-200 p-3">
+                            <div class="flex justify-between text-sm font-medium text-gray-700 mb-2">
+                                <span>{{ domain.name }}</span>
+                                <span>{{ domain.total_counted_credits }} 學分</span>
+                            </div>
+                            {% if domain.courses %}
+                            <div class="flex flex-wrap gap-2">
+                                {% for course in domain.courses %}
+                                <span class="rounded-full px-2 py-1 text-xs {% if course.status == '已通過' %}bg-green-100 text-green-800{% else %}bg-blue-100 text-blue-800{% endif %}">
+                                    {{ course.name }} {{ course.credits }}學分{% if course.status == '進行中' %}（進行中）{% endif %}
+                                </span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    {% if details.courses %}
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 text-sm">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500">學期</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500">課程</th>
+                                    <th class="px-3 py-2 text-center text-xs font-medium text-gray-500">學分</th>
+                                    <th class="px-3 py-2 text-center text-xs font-medium text-gray-500">成績</th>
+                                    <th class="px-3 py-2 text-center text-xs font-medium text-gray-500">狀態</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                {% for course in details.courses %}
+                                <tr>
+                                    <td class="px-3 py-2 text-gray-600">{{ course.term }}</td>
+                                    <td class="px-3 py-2 font-medium text-gray-800">{{ course.name }}</td>
+                                    <td class="px-3 py-2 text-center text-gray-600">{{ course.credits }}</td>
+                                    <td class="px-3 py-2 text-center text-gray-600">{{ course.score or '-' }}</td>
+                                    <td class="px-3 py-2 text-center">
+                                        <span class="rounded px-2 py-1 text-xs {% if course.status == '已通過' %}bg-green-100 text-green-800{% elif course.status == '進行中' %}bg-blue-100 text-blue-800{% else %}bg-gray-100 text-gray-700{% endif %}">
+                                            {{ course.status }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-sm text-gray-500">此類別沒有可顯示的已認列課程明細。</p>
+                    {% endif %}
+                    {% else %}
+                    <p class="text-sm text-gray-500">此類別尚未提供課程明細，請重新分析以產生明細。</p>
+                    {% endif %}
                 </div>
             </div>
             {% endfor %}
@@ -135,7 +217,12 @@
     <!-- 需人工確認 -->
     {% if r.manual_review_items %}
     <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
-        <h3 class="font-semibold text-orange-800 mb-2">⚠ 需人工確認</h3>
+        <h3 class="flex items-center gap-2 font-semibold text-orange-800 mb-2">
+            <svg class="h-5 w-5" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+            </svg>
+            需人工確認
+        </h3>
         <ul class="space-y-1">
             {% for item in r.manual_review_items %}
             <li class="text-sm text-orange-700">
@@ -146,13 +233,22 @@
     </div>
     {% endif %}
 
-    <p class="text-xs text-gray-400 text-center">
+    <p class="text-xs text-gray-500 text-center">
         本報告由 LLM 根據提供資料分析，正式畢業資格仍以系辦/教務處認定為準。
     </p>
 </div>
 
 <script>
 function graduationApp() {
-    return { init() {} };
+    return {
+        expandedRequirements: {},
+        init() {},
+        toggleRequirement(index) {
+            this.expandedRequirements[index] = !this.expandedRequirements[index];
+        },
+        isRequirementExpanded(index) {
+            return !!this.expandedRequirements[index];
+        },
+    };
 }
 </script>

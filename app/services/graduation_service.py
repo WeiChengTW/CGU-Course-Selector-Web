@@ -95,8 +95,8 @@ def _merge_course_csv(session_dir: Path) -> Path:
     def _is_passed(score: str) -> bool:
         if not score:
             return False
-        score = score.strip()
-        if score == "S":
+        score = score.strip().upper()
+        if score in ("S", "I"):
             return False
         if score in ("P", "通過", "及格"):
             return True
