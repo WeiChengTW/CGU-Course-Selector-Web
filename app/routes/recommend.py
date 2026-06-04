@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from app.services.session_service import is_logged_in
+from app.services.session_service import get_display_name, is_logged_in
 from app.templates_config import render_template
 
 router = APIRouter()
@@ -17,5 +17,5 @@ async def recommend_page(request: Request):
 
     return render_template(
         "recommend.html",
-        {"request": request, "title": "選課建議", "logged_in": True},
+        {"request": request, "title": "選課建議", "logged_in": True, "display_name": get_display_name(request)},
     )

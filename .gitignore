@@ -37,3 +37,4 @@ docs/
 .env
 
 data
+.claude/

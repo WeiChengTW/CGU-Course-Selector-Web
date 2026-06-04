@@ -4,7 +4,7 @@ from fastapi import APIRouter, Request, Query
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from app.services.catalog_service import CatalogService
 from app.services.course_service import CourseService
-from app.services.session_service import get_session_dir, is_logged_in
+from app.services.session_service import get_display_name, get_session_dir, get_session_profile, is_logged_in
 from app.templates_config import render_template
 
 router = APIRouter()
@@ -16,9 +16,16 @@ async def catalog_page(request: Request):
     if not is_logged_in(request):
         return RedirectResponse("/login", status_code=303)
 
+    profile = get_session_profile(request)
     return render_template(
         "catalog.html",
-        {"request": request, "title": "課程預選", "logged_in": True},
+        {
+            "request": request,
+            "title": "課程預選",
+            "logged_in": True,
+            "display_name": get_display_name(request),
+            "booking_count": profile.get("booking_count", 0),
+        },
     )
 
 

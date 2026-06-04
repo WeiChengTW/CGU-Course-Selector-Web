@@ -397,3 +397,128 @@ def scrape_moocs_courses(
         print(f"MOOCS 清單輸出：{save_path}")
 
     return courses
+
+
+def scrape_stugrade_grades(
+    username: str = "",
+    password: str = "",
+    *,
+    headless: bool = False,
+    timeout_ms: int = 300000,
+) -> list[dict[str, str]]:
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError as exc:
+        raise RuntimeError(
+            "需要先安裝 Playwright：python -m pip install playwright && python -m playwright install chromium"
+        ) from exc
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=headless)
+        context = browser.new_context(ignore_https_errors=True)
+        page = context.new_page()
+
+        url = "https://catalog.cgu.edu.tw/stugrade"
+        print(f"正在前往 {url} ...")
+        page.goto(url)
+
+        # Check if redirected to Microsoft login
+        is_redirected = False
+        for _ in range(50):
+            if "microsoftonline.com" in page.url:
+                is_redirected = True
+                break
+            page.wait_for_timeout(100)
+
+        if is_redirected:
+            print("偵測到跳轉至 Microsoft 登入頁面，請在彈出的瀏覽器中完成登入與驗證。")
+            elapsed = 0
+            login_success = False
+            while elapsed < timeout_ms:
+                if "catalog.cgu.edu.tw/stugrade" in page.url and "microsoftonline.com" not in page.url:
+                    page.wait_for_timeout(2000)
+                    if "microsoftonline.com" not in page.url:
+                        login_success = True
+                        break
+                page.wait_for_timeout(500)
+                elapsed += 500
+
+            if not login_success:
+                browser.close()
+                raise RuntimeError("等待微軟帳號登入逾時（5分鐘），同步終止。")
+
+            print("登入成功，已返回目標頁面！")
+        else:
+            page.wait_for_timeout(2000)
+
+        # Click #tabh0 to make sure the grades tab is selected
+        try:
+            tab_button = page.locator("#tabh0")
+            tab_button.wait_for(state="visible", timeout=15000)
+            tab_button.click()
+            page.wait_for_timeout(1000)
+        except Exception:
+            pass
+
+        EXTRACT_TABLE_JS = """
+        () => {
+          const tab = document.querySelector('#tab0');
+          if (!tab) return null;
+          const table = tab.querySelector('table');
+          if (!table) return null;
+          const rows = [];
+          const trs = Array.from(table.querySelectorAll('tr'));
+          for (const tr of trs) {
+            const cells = Array.from(tr.querySelectorAll('td, th')).map(c => (c.textContent || '').trim());
+            if (cells.length > 0) {
+              rows.push(cells);
+            }
+          }
+          return rows;
+        }
+        """
+
+        table_rows = page.evaluate(EXTRACT_TABLE_JS)
+        browser.close()
+
+    if not table_rows:
+        raise RuntimeError("無法在成績查詢分頁 (#tab0) 中找到學期成績表格。")
+
+    # First row is the header: 學年 | 學期 | 科目代號 | 課程名稱 | 成績 | 實得學分 | 備註 | 登錄日
+    header = table_rows[0]
+    expected_headers = ["學年", "學期", "科目代號", "課程名稱", "成績", "實得學分"]
+    
+    # Map headers to indices
+    header_indices = {}
+    for h in expected_headers:
+        try:
+            header_indices[h] = header.index(h)
+        except ValueError:
+            pass
+
+    year_idx = header_indices.get("學年", 0)
+    term_idx = header_indices.get("學期", 1)
+    call_id_idx = header_indices.get("科目代號", 2)
+    name_idx = header_indices.get("課程名稱", 3)
+    score_idx = header_indices.get("成績", 4)
+    credits_idx = header_indices.get("實得學分", 5)
+
+    courses = []
+    for r in table_rows[1:]:
+        if len(r) <= max(year_idx, term_idx, call_id_idx, name_idx, score_idx, credits_idx):
+            continue
+        
+        if "無資料" in r[0] or (len(r) == 1 and "無資料" in r[0]):
+            continue
+            
+        courses.append({
+            "year": r[year_idx],
+            "term": r[term_idx],
+            "call_id": r[call_id_idx],
+            "name": r[name_idx],
+            "score": r[score_idx],
+            "credits": r[credits_idx]
+        })
+
+    return courses
+

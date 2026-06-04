@@ -326,6 +326,25 @@
 
         <!-- 右側：預選清單 -->
         <div class="lg:col-span-1 space-y-4">
+            {% if booking_count %}
+            <div class="rounded-xl border border-[#B8C8FF] bg-[#EEF2FF] px-4 py-3" x-show="!bookingImportDismissed">
+                <div class="text-sm font-medium text-[#3B5BDB] mb-3">
+                    iCGU 已有 <strong>{{ booking_count }}</strong> 門預選課程，要同步到下方預選清單與週課表嗎？
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button"
+                            @click="importBooking()"
+                            class="px-4 py-1.5 rounded-lg bg-[#3B5BDB] text-white text-sm font-semibold hover:bg-[#2F4AC0] transition">
+                        同步 iCGU 預選課程
+                    </button>
+                    <button type="button" @click="bookingImportDismissed = true"
+                            class="px-3 py-1.5 rounded-lg text-[#3B5BDB] text-sm hover:bg-[#D8E0FF] transition">
+                        略過
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <div class="bg-[#E8E2D6] px-4 py-3 border-b flex items-center justify-between">
                     <div class="flex items-center gap-2">
@@ -497,6 +516,7 @@ function courseSelectorApp() {
         selectedCourse: null,
         draggedCourse: null,
         draggedIndex: null,
+        bookingImportDismissed: false,
 
         terms: [
             { termid: 72, label: '115 / 1' },
@@ -737,6 +757,30 @@ function courseSelectorApp() {
 
         saveCart() {
             localStorage.setItem('courseCart', JSON.stringify(this.cart));
+        },
+
+        async importBooking() {
+            try {
+                const response = await fetch('/courses/import-booking', { method: 'POST' });
+                const data = await response.json();
+                if (!response.ok || data.error) throw new Error(data.error || '同步失敗');
+
+                const courses = data.courses || [];
+                for (const course of courses) {
+                    const existingIndex = this.cart.findIndex(c => c.SECTIONID === course.SECTIONID);
+                    if (existingIndex >= 0) {
+                        this.cart[existingIndex] = { ...this.cart[existingIndex], ...course };
+                    } else {
+                        this.cart.push(course);
+                    }
+                }
+                this.saveCart();
+                this.renderSchedule();
+                this.bookingImportDismissed = true;
+                alert(`已同步 ${courses.length} 門 iCGU 預選課程`);
+            } catch (e) {
+                alert('同步失敗：' + e.message);
+            }
         },
 
         async search() {

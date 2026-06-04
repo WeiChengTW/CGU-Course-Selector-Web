@@ -119,10 +119,18 @@ def scrape_moocs_grade_rows(username: str, password: str, headless: bool = True)
 
         rows = parse_grade_rows(_combined_body_text(page))
 
+        display_name = ""
+        try:
+            name_el = page.locator(".user .name").first
+            if name_el.count() > 0:
+                display_name = name_el.inner_text().strip()
+        except Exception:
+            pass
+
         browser.close()
         if not rows:
             raise RuntimeError("MOOCS 修課成績頁未解析到任何課程。")
-        return rows
+        return rows, display_name
 
 
 def _normalize_generated_csv(source_path: Path, target_path: Path) -> int:
@@ -166,7 +174,23 @@ def sync_moocs_courses(
     generated_tmp_path = session_dir / "courses_detail.csv.tmp"
     taken_tmp_path = session_dir / "taken_courses.csv.tmp"
 
-    grade_rows = scrape_moocs_grade_rows(username, password, headless=headless)
+    grade_rows, display_name = scrape_moocs_grade_rows(username, password, headless=headless)
+
+    courses = []
+    seen = set()
+    raw_lines = []
+
+    for r in grade_rows:
+        sem = r["學年學期"]
+        year = sem[:3] if len(sem) >= 3 else sem
+        term = sem[3:] if len(sem) >= 4 else ""
+        name = r["課程名稱"]
+        key = (year, term, name)
+        if key not in seen:
+            seen.add(key)
+            courses.append({"year": year, "term": term, "call_id": "", "name": name})
+            raw_lines.append(f"{len(raw_lines) + 1}. {year}-{term}-{name}")
+
     with taken_tmp_path.open("w", encoding="utf-8-sig", newline="") as target_file:
         writer = csv.DictWriter(
             target_file,
@@ -175,14 +199,17 @@ def sync_moocs_courses(
         writer.writeheader()
         writer.writerows(grade_rows)
 
-    courses = scrape_moocs_courses(
-        username,
-        password,
-        headless=headless,
-        max_pages=max_pages,
-        save_path=raw_tmp_path,
-        debug=False,
-    )
+    from lib.utils import mask_identifier, ensure_parent
+    ensure_parent(raw_tmp_path)
+    lines = [
+        "# 長庚大學校務系統成績課程清單",
+        f"# 帳號：{mask_identifier(username)}",
+        f"# 總計：{len(courses)} 門課程",
+        "",
+        *raw_lines,
+    ]
+    raw_tmp_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
     catalog_count, total_credits, errors = write_details(courses, generated_tmp_path, delay)
 
     taken_tmp_path.replace(taken_path)
@@ -196,4 +223,5 @@ def sync_moocs_courses(
         "errors": errors,
         "taken_path": taken_path,
         "raw_path": raw_path,
+        "display_name": display_name,
     }

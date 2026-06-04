@@ -901,7 +901,52 @@ def _build_system_elective_domains(records: list[dict], rules_index: dict | None
     return result
 
 
-def _build_requirement_course_details(records: list[dict], rules_index: dict | None = None) -> dict[str, dict]:
+def _build_multi_elective_domains(records: list[dict], classifications: list[dict] | None) -> list[dict]:
+    """Build domain breakdown for 通識多元選修 from LLM classifications."""
+    if not classifications:
+        return []
+
+    # Map course name → (domain, eligible)
+    course_map: dict[str, tuple[str, bool]] = {}
+    for cls in classifications:
+        if cls.get("grad_category") == "通識多元選修" and cls.get("domain"):
+            course_map[cls["course_name"]] = (cls["domain"], cls.get("eligible", True))
+
+    domains: dict[str, dict] = {}
+    for record in records:
+        cat = record.get("課程類別", "")
+        if cat not in {"校定選修", "校定必修"}:
+            continue
+        detail = _course_detail(record)
+        if detail["status"] == "未採計":
+            continue
+        name = detail["name"]
+        if name not in course_map:
+            continue
+        domain, eligible = course_map[name]
+        if not eligible:
+            continue
+
+        if domain not in domains:
+            domains[domain] = {"name": domain, "passed_credits": 0.0, "in_progress_credits": 0.0, "courses": []}
+
+        if detail["status"] == "已通過":
+            domains[domain]["passed_credits"] += detail["credits"]
+        else:
+            domains[domain]["in_progress_credits"] += detail["credits"]
+        domains[domain]["courses"].append(detail)
+
+    result = []
+    for domain in domains.values():
+        domain["total_counted_credits"] = domain["passed_credits"] + domain["in_progress_credits"]
+        if domain["total_counted_credits"] > 0:
+            result.append(domain)
+    return result
+
+
+def _build_requirement_course_details(
+    records: list[dict], rules_index: dict | None = None, classifications: list[dict] | None = None
+) -> dict[str, dict]:
     details = {
         "畢業總學分": _summarize_detail_courses(records),
         "系定必修": _summarize_detail_courses(records, include_categories={"系定必修"}),
@@ -909,8 +954,10 @@ def _build_requirement_course_details(records: list[dict], rules_index: dict | N
         "校定必修": _summarize_detail_courses(records, include_categories={"校定必修"}),
         "校定選修": _summarize_detail_courses(records, include_categories={"校定選修"}),
         "通識": _summarize_detail_courses(records, include_categories={"校定必修", "校定選修"}),
+        "通識多元選修": _summarize_detail_courses(records, include_categories={"校定選修", "校定必修"}),
     }
     details["系定選修"]["domains"] = _build_system_elective_domains(records, rules_index)
+    details["通識多元選修"]["domains"] = _build_multi_elective_domains(records, classifications)
     return details
 
 
@@ -921,6 +968,8 @@ def _matching_detail_key(category: str) -> str | None:
         return "系定必修"
     if "系定選修" in category or "系選修" in category:
         return "系定選修"
+    if "通識" in category and "多元" in category:
+        return "通識多元選修"
     if "通識" in category and "多元" not in category:
         return None
     if "校定必修" in category:
@@ -954,7 +1003,7 @@ def _apply_precomputed_overrides(
     classifications: list[dict] | None = None,
 ) -> None:
     """Use deterministic CSV-derived values to normalize LLM report arithmetic and details."""
-    details = _build_requirement_course_details(records, rules_index)
+    details = _build_requirement_course_details(records, rules_index, classifications)
     total_detail = details["畢業總學分"]
 
     dyn = _extract_domains_from_index(rules_index) if rules_index else {}

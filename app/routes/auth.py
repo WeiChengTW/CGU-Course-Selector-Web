@@ -63,8 +63,9 @@ async def login(
                 password=password,
                 session_dir=session_dir,
             )
+            display_name = sync_result.get("display_name") or username
             save_course_record(username, session_dir, sync_result)
-            save_session_meta(session_dir, username, sync_result)
+            save_session_meta(session_dir, display_name, sync_result)
     except Exception:
         destroy_session(session_id)
         return render_template(
@@ -72,7 +73,40 @@ async def login(
             {
                 "request": request,
                 "title": "登入",
-                "error": "登入或同步失敗，請確認帳密正確，或 MOOCS 是否需要驗證碼。",
+                "error": "登入或同步失敗，請確認帳密正確，或單一登入/M365 驗證是否逾時或取消。",
+                "logged_in": False,
+            },
+        )
+
+    response = RedirectResponse("/courses", status_code=303)
+    response.set_cookie(
+        SESSION_COOKIE,
+        session_id,
+        httponly=True,
+        samesite="lax",
+        max_age=4 * 60 * 60,
+    )
+    return response
+
+
+@router.post("/login/icgu", response_class=HTMLResponse)
+async def login_icgu(request: Request):
+    from app.services.icgu_sync_service import sync_icgu_courses
+
+    session_id, session_dir = create_session_dir()
+
+    try:
+        sync_result = await asyncio.to_thread(sync_icgu_courses, session_dir)
+        display_name = sync_result.get("display_name") or "iCGU 使用者"
+        save_session_meta(session_dir, display_name, sync_result)
+    except Exception as exc:
+        destroy_session(session_id)
+        return render_template(
+            "login.html",
+            {
+                "request": request,
+                "title": "登入",
+                "error": f"iCGU 登入或同步失敗：{exc}",
                 "logged_in": False,
             },
         )

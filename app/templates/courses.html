@@ -16,14 +16,14 @@
                     @click="showRefreshForm = !showRefreshForm"
                     class="w-full bg-[#E39800] hover:bg-[#C48400] text-white font-semibold px-4 py-2 rounded-lg transition disabled:opacity-60"
                     :disabled="refreshing">
-                <span x-show="!refreshing">刷新重抓 MOOCS</span>
+                <span x-show="!refreshing">刷新重抓校務成績</span>
                 <span x-show="refreshing">同步中，請稍候...</span>
             </button>
             <form x-show="showRefreshForm" x-cloak @submit.prevent="refreshCourses()" class="mt-3 space-y-2">
                 <input type="password"
                        x-model="refreshPassword"
                        autocomplete="current-password"
-                       placeholder="輸入 MOOCS 密碼"
+                       placeholder="輸入 M365 密碼"
                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E39800] focus:border-transparent">
                 <button type="submit"
                         :disabled="refreshing || !refreshPassword"
@@ -127,7 +127,7 @@
 
         <!-- 空狀態 -->
         <div x-show="filteredCourses.length === 0" class="text-center py-12 text-gray-500">
-            尚無修課資料，請先同步 MOOCS 課程清單。
+            尚無修課資料，請先同步校務成績資料。
         </div>
     </div>
 
@@ -204,22 +204,31 @@ function coursesApp() {
             }
         },
 
+
         get filteredCourses() {
-            return this.courses.filter(c => {
-                const sem = c.學年學期 || '';
-                const year = sem.slice(0, 3);  // e.g., "114"
-                const term = sem.slice(3);     // e.g., "1" or "2"
+            return this.courses
+                .map((course, index) => ({ course, index }))
+                .filter(({ course: c }) => {
+                    const sem = c.學年學期 || '';
+                    const year = sem.slice(0, 3);  // e.g., "114"
+                    const term = sem.slice(3);     // e.g., "1" or "2"
 
-                if (this.filterYear && year !== this.filterYear) return false;
-                if (this.filterTerm && term !== this.filterTerm) return false;
+                    if (this.filterYear && year !== this.filterYear) return false;
+                    if (this.filterTerm && term !== this.filterTerm) return false;
 
-                if (this.filterStatus) {
-                    const status = this.getCourseStatus(c);
-                    if (status !== this.filterStatus) return false;
-                }
+                    if (this.filterStatus) {
+                        const status = this.getCourseStatus(c);
+                        if (status !== this.filterStatus) return false;
+                    }
 
-                return true;
-            });
+                    return true;
+                })
+                .sort((a, b) => {
+                    const semA = a.course.學年學期 || '';
+                    const semB = b.course.學年學期 || '';
+                    return semB.localeCompare(semA) || a.index - b.index;
+                })
+                .map(({ course }) => course);
         },
 
         get totalCredits() {

@@ -17,7 +17,7 @@ SESSION_COOKIE = "cgu_course_session"
 SESSION_ROOT = DATA_DIR / "sessions"
 RECORD_ROOT = DATA_DIR / "records"
 SESSION_META_FILE = "session_meta.json"
-COURSE_RECORD_FILES = ("taken_courses.csv", "courses_detail.csv", "moocs_courses.txt")
+COURSE_RECORD_FILES = ("taken_courses.csv", "courses_detail.csv", "moocs_courses.txt", "icgu_exemptions.csv", "icgu_booking.csv")
 SESSION_ID_RE = re.compile(r"^[A-Za-z0-9_-]{43}$")
 
 
@@ -179,6 +179,33 @@ def _safe_sync_result(sync_result: dict) -> dict:
     return {
         key: str(value) if isinstance(value, Path) else value
         for key, value in sync_result.items()
+    }
+
+
+def get_display_name(request: Request) -> str:
+    session_dir = get_session_dir(request)
+    if session_dir is None:
+        return ""
+    return load_session_meta(session_dir).get("username", "")
+
+
+def get_session_profile(request: Request) -> dict:
+    session_dir = get_session_dir(request)
+    if session_dir is None:
+        return {}
+    meta = load_session_meta(session_dir)
+    booking_count = 0
+    if session_dir:
+        booking_path = session_dir / "icgu_booking.csv"
+        if booking_path.exists():
+            import csv
+            with booking_path.open("r", encoding="utf-8-sig") as f:
+                booking_count = sum(1 for _ in csv.DictReader(f))
+    return {
+        "display_name": meta.get("username", ""),
+        "department": meta.get("last_sync_result", {}).get("department", ""),
+        "department_raw": meta.get("last_sync_result", {}).get("department_raw", ""),
+        "booking_count": booking_count,
     }
 
 

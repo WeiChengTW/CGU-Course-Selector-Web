@@ -53,11 +53,11 @@ def term_id_for(year: str, term: str, term_map: dict | None = None) -> int:
     )
 
 
-def fetch_course(termid: int, sectionid: str) -> dict:
+def fetch_course(termid: int, sectionid: str = "", call_id: str = "") -> dict:
     params = {
         "termid": str(termid),
         "departmentid": "",
-        "call_id": "",
+        "call_id": call_id,
         "keyward": "",
         "sectionid": sectionid,
         "teaName": "",
@@ -74,22 +74,32 @@ def fetch_course(termid: int, sectionid: str) -> dict:
         payload = json.loads(response.read().decode("utf-8"))
 
     if not payload:
-        raise LookupError(f"查無資料：termid={termid}, sectionid={sectionid}")
+        raise LookupError(f"查無資料：termid={termid}, sectionid={sectionid}, call_id={call_id}")
     if isinstance(payload, dict):
         payload = [payload]
 
-    exact_matches = [
-        item
-        for item in payload
-        if str(item.get("SECTIONID", "")).strip() == str(sectionid).strip()
-    ]
+    if sectionid:
+        exact_matches = [
+            item
+            for item in payload
+            if str(item.get("SECTIONID", "")).strip() == str(sectionid).strip()
+        ]
+    else:
+        exact_matches = [
+            item
+            for item in payload
+            if str(item.get("CALL_ID", "")).strip() == str(call_id).strip()
+        ]
+        if not exact_matches:
+            exact_matches = payload
+
     if not exact_matches:
         raise LookupError(
-            f"API 回傳資料中找不到精準開課序號：termid={termid}, sectionid={sectionid}"
+            f"API 回傳資料中找不到精準項目：termid={termid}, sectionid={sectionid}, call_id={call_id}"
         )
     if len(exact_matches) > 1:
         print(
-            f"警告：API 回傳多筆相同開課序號 {sectionid}，採用第一筆。", file=sys.stderr
+            f"警告：API 回傳多筆符合的課程，採用第一筆。", file=sys.stderr
         )
     return exact_matches[0]
 
@@ -97,8 +107,8 @@ def fetch_course(termid: int, sectionid: str) -> dict:
 def detail_row(course: dict[str, str], data: dict) -> list:
     return [
         f"{data.get('ACADMICYEAR', course['year'])}-{data.get('ACADMICTERM', course['term'])}",
-        data.get("CALL_ID", ""),
-        data.get("SECTIONID", course["sectionid"]),
+        data.get("CALL_ID", course.get("call_id", "")),
+        data.get("SECTIONID", course.get("sectionid", "")),
         data.get("DEPARTMENTNAME_C", ""),
         data.get("YEAR", ""),
         data.get("CCOURSENAME", course.get("name", "")),
@@ -123,22 +133,23 @@ def write_details(
     total_credits = 0.0
 
     for index, course in enumerate(courses, start=1):
+        c_id = course.get("sectionid") or course.get("call_id") or ""
         label = (
-            f"{course['year']}-{course['term']} {course['name']} {course['sectionid']}"
+            f"{course['year']}-{course['term']} {course['name']} {c_id}"
         )
         try:
             termid = term_id_for(course["year"], course["term"], term_map)
-            data = fetch_course(termid, course["sectionid"])
+            data = fetch_course(termid, sectionid=course.get("sectionid", ""), call_id=course.get("call_id", ""))
 
             api_name = data.get("CCOURSENAME", "")
             if (
                 api_name
-                and course["name"]
+                and course.get("name")
                 and course["name"].lower() not in api_name.lower()
                 and api_name.lower() not in course["name"].lower()
             ):
                 print(
-                    f"警告：MOOCS 課名 '{course['name']}' 與 API 回傳課名 '{api_name}' 不一致",
+                    f"警告：課名 '{course['name']}' 與 API 回傳課名 '{api_name}' 不一致",
                     file=sys.stderr,
                 )
 

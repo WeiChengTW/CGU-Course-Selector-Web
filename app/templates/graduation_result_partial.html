@@ -1,7 +1,7 @@
 {% set r = report %}
 {% set recognized_credits = r.recognized_credits | float %}
 {% set required_credits = r.required_credits | float %}
-<div x-data="graduationApp()" x-init="init()" class="space-y-6">
+<div class="space-y-6">
 
     <!-- 頂部狀態 + 重新分析 -->
     <div class="flex items-center justify-between">
@@ -50,11 +50,11 @@
             {% for req in r.requirements %}
             {% set parsed_pct = 100 if req.status == '已完成' else ([((req.completed | string | replace('學分','') | replace('已修','') | trim | float(0)) / ([req.required | string | replace('學分','') | replace('需','') | trim | float(1), 1] | max) * 100) | round | int, 100] | min) %}
             {% set req_pct = req.progress_percent | default(parsed_pct) %}
-            <div class="rounded-lg border border-gray-200 p-4">
+            <div class="rounded-lg border border-gray-200 p-4" x-data="{ expanded: false }">
                 <button type="button"
                         class="w-full text-left"
-                        @click="toggleRequirement({{ loop.index0 }})"
-                        :aria-expanded="isRequirementExpanded({{ loop.index0 }}).toString()"
+                        @click="expanded = !expanded"
+                        :aria-expanded="expanded.toString()"
                         aria-controls="requirement-details-{{ loop.index0 }}">
                     <div class="flex items-center justify-between gap-3 text-sm mb-1">
                         <span class="font-medium text-gray-700">{{ req.category }}</span>
@@ -62,7 +62,7 @@
                             <span class="{% if req.status == '已完成' %}text-green-600{% elif req.status == '進行中' %}text-blue-600{% else %}text-[#C48400]{% endif %} font-medium">
                                 {{ req.status }}
                             </span>
-                            <span class="text-gray-500" x-text="isRequirementExpanded({{ loop.index0 }}) ? '收合' : '展開'"></span>
+                            <span class="text-gray-500" x-text="expanded ? '收合' : '展開'"></span>
                         </span>
                     </div>
                     <div class="text-xs text-gray-500 mb-1">
@@ -75,7 +75,7 @@
                     </div>
                 </button>
 
-                <div id="requirement-details-{{ loop.index0 }}" x-show="isRequirementExpanded({{ loop.index0 }})" x-cloak class="mt-4 border-t border-gray-100 pt-4">
+                <div id="requirement-details-{{ loop.index0 }}" x-show="expanded" x-cloak class="mt-4 border-t border-gray-100 pt-4">
                     {% if req.course_details %}
                     {% set details = req.course_details %}
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 text-sm">
@@ -242,17 +242,3 @@
     </p>
 </div>
 
-<script>
-function graduationApp() {
-    return {
-        expandedRequirements: {},
-        init() {},
-        toggleRequirement(index) {
-            this.expandedRequirements[index] = !this.expandedRequirements[index];
-        },
-        isRequirementExpanded(index) {
-            return !!this.expandedRequirements[index];
-        },
-    };
-}
-</script>

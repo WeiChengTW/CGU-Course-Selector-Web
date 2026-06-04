@@ -6,7 +6,7 @@ from fastapi import APIRouter, BackgroundTasks, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from app.services.graduation_service import GraduationService, run_graduation_analysis
-from app.services.session_service import get_session_dir, is_logged_in
+from app.services.session_service import get_display_name, get_session_dir, is_logged_in
 from app.templates_config import render_template
 
 router = APIRouter()
@@ -31,6 +31,7 @@ async def graduation_page(request: Request):
             "request": request,
             "title": "畢業進度",
             "logged_in": True,
+            "display_name": get_display_name(request),
             "analysis_status": status,
             "report": report,
         },
@@ -64,6 +65,7 @@ async def start_analysis(
                 "request": request,
                 "title": "畢業進度",
                 "logged_in": True,
+                "display_name": get_display_name(request),
                 "analysis_status": {"status": "error", "message": "請上傳畢業學分 PDF 檔案"},
                 "report": None,
             },

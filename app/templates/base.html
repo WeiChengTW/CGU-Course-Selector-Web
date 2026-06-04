@@ -98,6 +98,9 @@
                     </a>
                     {% endif %}
                     {% if logged_in %}
+                    {% if display_name %}
+                    <span class="px-3 py-1 rounded-lg bg-black/10 text-[#333333] text-sm font-medium">{{ display_name }}</span>
+                    {% endif %}
                     <form method="post" action="/logout">
                         <button type="submit" class="px-4 py-2 rounded-lg text-[#333333] font-medium hover:bg-black/10 transition cursor-pointer">
                             登出
