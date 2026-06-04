@@ -48,8 +48,14 @@
         <h3 class="text-lg font-semibold text-[#333333] mb-4">各類別完成狀況</h3>
         <div class="space-y-4">
             {% for req in r.requirements %}
+            {% set parsed_pct = 100 if req.status == '已完成' else ([((req.completed | string | replace('學分','') | replace('已修','') | trim | float(0)) / ([req.required | string | replace('學分','') | replace('需','') | trim | float(1), 1] | max) * 100) | round | int, 100] | min) %}
+            {% set req_pct = req.progress_percent | default(parsed_pct) %}
             <div class="rounded-lg border border-gray-200 p-4">
-                <button type="button" class="w-full text-left" @click="toggleRequirement({{ loop.index0 }})">
+                <button type="button"
+                        class="w-full text-left"
+                        @click="toggleRequirement({{ loop.index0 }})"
+                        :aria-expanded="isRequirementExpanded({{ loop.index0 }}).toString()"
+                        aria-controls="requirement-details-{{ loop.index0 }}">
                     <div class="flex items-center justify-between gap-3 text-sm mb-1">
                         <span class="font-medium text-gray-700">{{ req.category }}</span>
                         <span class="flex items-center gap-2">
@@ -65,11 +71,11 @@
                     </div>
                     <div class="w-full bg-gray-200 rounded-full h-2">
                         <div class="h-2 rounded-full {% if req.status == '已完成' %}bg-green-500{% elif req.status == '進行中' %}bg-blue-500{% else %}bg-[#E39800]{% endif %}"
-                             style="width: {{ req.progress_percent | default(100 if req.status == '已完成' else 60) }}%"></div>
+                             style="width: {{ req_pct }}%"></div>
                     </div>
                 </button>
 
-                <div x-show="isRequirementExpanded({{ loop.index0 }})" x-cloak class="mt-4 border-t border-gray-100 pt-4">
+                <div id="requirement-details-{{ loop.index0 }}" x-show="isRequirementExpanded({{ loop.index0 }})" x-cloak class="mt-4 border-t border-gray-100 pt-4">
                     {% if req.course_details %}
                     {% set details = req.course_details %}
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 text-sm">
@@ -217,10 +223,8 @@
     <!-- 需人工確認 -->
     {% if r.manual_review_items %}
     <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
-        <h3 class="flex items-center gap-2 font-semibold text-orange-800 mb-2">
-            <svg class="h-5 w-5" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
-            </svg>
+        <h3 class="font-semibold text-orange-800 mb-2 flex items-center gap-1.5">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/></svg>
             需人工確認
         </h3>
         <ul class="space-y-1">
